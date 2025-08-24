@@ -26,7 +26,7 @@ func NewLink(repo repository.Repository) http.HandlerFunc {
 			}
 
 			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte(shortURL))
+			w.Write([]byte("http://localhost:8080/" + shortURL))
 		case http.MethodGet:
 			shortURL := r.URL.Path[1:]
 			longURL, err := repo.Get(shortURL)
