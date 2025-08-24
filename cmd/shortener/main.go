@@ -18,7 +18,7 @@ func run() error {
 	var repo repository.Repository = inmemory.New()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.NewLink(repo))
+	mux.HandleFunc("/", handler.CommonHandler(repo))
 
 	return http.ListenAndServe(`:8080`, mux)
 }

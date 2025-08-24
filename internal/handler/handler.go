@@ -8,7 +8,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
 )
 
-func NewLink(repo repository.Repository) http.HandlerFunc {
+func CommonHandler(repo repository.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
