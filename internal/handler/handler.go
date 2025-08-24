@@ -18,6 +18,7 @@ func CommonHandler(repo repository.Repository) http.HandlerFunc {
 				return
 			}
 			longURL := string(body)
+			r.Body.Close()
 
 			shortURL := shortener.GenerateShortURL()
 			if err := repo.Save(shortURL, string(longURL)); err != nil {
