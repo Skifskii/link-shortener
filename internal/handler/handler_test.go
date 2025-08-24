@@ -135,6 +135,7 @@ func TestCommonHandler_TableDriven(t *testing.T) {
 
 			resp := w.Result()
 			body, _ := io.ReadAll(resp.Body)
+			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.wantStatus {
 				t.Errorf("expected status %d, got %d", tt.wantStatus, resp.StatusCode)
