@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
 	"github.com/Skifskii/link-shortener/internal/repository"
@@ -18,6 +20,9 @@ func main() {
 }
 
 func run() error {
+	// конфиг
+	cfg := config.New()
+
 	// репозиторий
 	var repo repository.Repository = inmemory.New()
 
@@ -27,8 +32,9 @@ func run() error {
 	// роутер
 	r := chi.NewRouter()
 
-	r.Get("/{id}", redirect.New(repo))
-	r.Post("/", save.New(repo, s))
+	r.Get(cfg.BaseURL+"{id}", redirect.New(repo))
+	r.Post(cfg.BaseURL, save.New(repo, s))
 
-	return http.ListenAndServe(`:8080`, r)
+	fmt.Printf("Starting server at %s\n", cfg.Address)
+	return http.ListenAndServe(cfg.Address, r)
 }
