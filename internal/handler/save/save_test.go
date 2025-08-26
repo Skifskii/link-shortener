@@ -48,6 +48,8 @@ func (e *errBody) Close() error {
 }
 
 func TestNew(t *testing.T) {
+	baseURL := "http://localhost:8080"
+
 	tests := []struct {
 		name         string
 		body         string
@@ -88,8 +90,8 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := New(tt.saver, tt.gen)
-			
+			h := New(tt.saver, tt.gen, baseURL)
+
 			req := httptest.NewRequest(http.MethodPost, "/", nil)
 
 			if tt.customBody != nil {

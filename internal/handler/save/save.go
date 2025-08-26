@@ -13,7 +13,7 @@ type URLSaver interface {
 	Save(shortURL, longURL string) error
 }
 
-func New(us URLSaver, s ShortGenerator) http.HandlerFunc {
+func New(us URLSaver, s ShortGenerator, baseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -30,6 +30,6 @@ func New(us URLSaver, s ShortGenerator) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("http://localhost:8080/" + shortURL))
+		w.Write([]byte(baseURL + "/" + shortURL))
 	}
 }

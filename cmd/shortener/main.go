@@ -32,8 +32,8 @@ func run() error {
 	// роутер
 	r := chi.NewRouter()
 
-	r.Get(cfg.BaseURL+"{id}", redirect.New(repo))
-	r.Post(cfg.BaseURL, save.New(repo, s))
+	r.Get("/{id}", redirect.New(repo))
+	r.Post("/", save.New(repo, s, cfg.BaseURL))
 
 	fmt.Printf("Starting server at %s\n", cfg.Address)
 	return http.ListenAndServe(cfg.Address, r)
