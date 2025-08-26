@@ -3,9 +3,12 @@ package main
 import (
 	"net/http"
 
-	"github.com/Skifskii/link-shortener/internal/handler"
+	"github.com/Skifskii/link-shortener/internal/handler/redirect"
+	"github.com/Skifskii/link-shortener/internal/handler/save"
 	"github.com/Skifskii/link-shortener/internal/repository"
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
+	"github.com/Skifskii/link-shortener/internal/service/shortener"
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -15,10 +18,17 @@ func main() {
 }
 
 func run() error {
+	// репозиторий
 	var repo repository.Repository = inmemory.New()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.CommonHandler(repo))
+	// генератор коротких ссылок
+	s := shortener.New(6)
 
-	return http.ListenAndServe(`:8080`, mux)
+	// роутер
+	r := chi.NewRouter()
+
+	r.Get("/{id}", redirect.New(repo))
+	r.Post("/", save.New(repo, s))
+
+	return http.ListenAndServe(`:8080`, r)
 }
