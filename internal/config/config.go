@@ -1,18 +1,35 @@
 package config
 
-import "flag"
+import (
+	"flag"
+	"fmt"
+	"log"
+
+	"github.com/caarlos0/env/v6"
+	"github.com/joho/godotenv"
+)
 
 type Config struct {
-	Address string // localhost:8080
-	BaseURL string // http://localhost:8080/
+	Address string `env:"SERVER_ADDRESS"`
+	BaseURL string `env:"BASE_URL"`
 }
 
 func New() *Config {
 	cfg := &Config{}
 
+	// Парсим флаги командной строки
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "base url")
 	flag.Parse()
+
+	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Warning: .env file not found, proceeding without it")
+	}
+	err := env.Parse(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return cfg
 }
