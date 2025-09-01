@@ -13,11 +13,12 @@ import (
 
 // мок для генератора коротких ссылок
 type mockGenerator struct {
+	err   error
 	fixed string
 }
 
-func (mg *mockGenerator) GenerateShort() string {
-	return mg.fixed
+func (mg *mockGenerator) GenerateShort() (string, error) {
+	return mg.fixed, mg.err
 }
 
 // мок для сохранения ссылок
@@ -76,6 +77,15 @@ func TestNew(t *testing.T) {
 			saver:        &mockSaver{},
 			wantStatus:   http.StatusInternalServerError,
 			wantContains: "Не удалось прочитать тело запроса",
+			wantSave:     false,
+		},
+		{
+			name:         "generate short link error",
+			body:         "https://example.com",
+			gen:          &mockGenerator{fixed: "abc123", err: errors.New("gen error")},
+			saver:        &mockSaver{},
+			wantStatus:   http.StatusInternalServerError,
+			wantContains: "Ошибка при генерации короткой ссылки",
 			wantSave:     false,
 		},
 		{
