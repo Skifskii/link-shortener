@@ -7,6 +7,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
+	"github.com/Skifskii/link-shortener/internal/handler/shorten"
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/repository"
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
@@ -35,6 +36,7 @@ func Run() error {
 	r.Use(logger.RequestLogger(zl))
 	r.Get("/{id}", redirect.New(repo))
 	r.Post("/", save.New(repo, s, cfg.BaseURL))
+	r.Post("/api/shorten", shorten.New(repo, s, cfg.BaseURL))
 
 	fmt.Printf("Starting server at %s\n", cfg.Address)
 	return http.ListenAndServe(cfg.Address, r)
