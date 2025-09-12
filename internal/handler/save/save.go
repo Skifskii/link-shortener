@@ -6,7 +6,7 @@ import (
 )
 
 type ShortGenerator interface {
-	GenerateShort() string
+	GenerateShort() (string, error)
 }
 
 type URLSaver interface {
@@ -23,7 +23,12 @@ func New(us URLSaver, s ShortGenerator, baseURL string) http.HandlerFunc {
 		longURL := string(body)
 		r.Body.Close()
 
-		shortURL := s.GenerateShort()
+		shortURL, err := s.GenerateShort()
+		if err != nil {
+			http.Error(w, "Ошибка при генерации короткой ссылки", http.StatusInternalServerError)
+			return
+		}
+
 		if err := us.Save(shortURL, string(longURL)); err != nil {
 			http.Error(w, "Ошибка при сохранении ссылки", http.StatusInternalServerError)
 			return
