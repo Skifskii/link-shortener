@@ -9,6 +9,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/handler/save"
 	"github.com/Skifskii/link-shortener/internal/handler/shorten"
 	"github.com/Skifskii/link-shortener/internal/logger"
+	"github.com/Skifskii/link-shortener/internal/middleware"
 	"github.com/Skifskii/link-shortener/internal/repository"
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
@@ -34,6 +35,7 @@ func Run() error {
 	// HTTP сервер
 	r := chi.NewRouter()
 	r.Use(logger.RequestLogger(zl))
+	r.Use(middleware.GzipMiddleware)
 	r.Get("/{id}", redirect.New(repo))
 	r.Post("/", save.New(repo, s, cfg.BaseURL))
 	r.Post("/api/shorten", shorten.New(repo, s, cfg.BaseURL))
