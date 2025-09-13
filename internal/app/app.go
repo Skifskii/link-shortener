@@ -10,8 +10,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/handler/shorten"
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/middleware"
-	"github.com/Skifskii/link-shortener/internal/repository"
-	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
+	"github.com/Skifskii/link-shortener/internal/repository/file"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
 	"github.com/go-chi/chi/v5"
 )
@@ -21,7 +20,10 @@ func Run() error {
 	cfg := config.New()
 
 	// Репозиторий
-	var repo repository.Repository = inmemory.New()
+	repo, err := file.NewFileRepo(cfg.FileStoragePath)
+	if err != nil {
+		return err
+	}
 
 	// Сервис сокращения ссылок
 	s := shortener.New(6)

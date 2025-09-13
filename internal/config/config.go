@@ -10,9 +10,10 @@ import (
 )
 
 type Config struct {
-	Address  string `env:"SERVER_ADDRESS"`
-	BaseURL  string `env:"BASE_URL"`
-	LogLevel string `env:"LOG_LEVEL"`
+	Address         string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 }
 
 func New() *Config {
@@ -22,6 +23,7 @@ func New() *Config {
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "base url")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level (debug, info, warn, error)")
+	flag.StringVar(&cfg.FileStoragePath, "f", "storage.json", "file for saving links")
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)
