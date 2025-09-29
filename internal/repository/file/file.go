@@ -3,10 +3,13 @@ package file
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
 )
+
+var errEmptyFilepath = errors.New("filepath is empty")
 
 type LinkRecord struct {
 	UUID        string `json:"uuid"`
@@ -119,6 +122,10 @@ func (fr *fileReader) countRecords() (int, error) {
 }
 
 func NewFileRepo(filepath string) (*FileRepo, error) {
+	if filepath == "" {
+		return nil, errEmptyFilepath
+	}
+
 	fileRepo := FileRepo{}
 	var err error
 
