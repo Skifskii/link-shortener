@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/handler/ping"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
 	"github.com/Skifskii/link-shortener/internal/handler/shorten"
@@ -22,7 +23,11 @@ type Shorter interface {
 	Redirect(shortURL string) (longURL string, err error)
 }
 
-func New(zl *zap.Logger, shorter Shorter) *Router {
+type pinger interface {
+	Ping() error
+}
+
+func New(zl *zap.Logger, shorter Shorter, p pinger) *Router {
 	r := chi.NewRouter()
 
 	r.Use(logger.RequestLogger(zl))
@@ -31,6 +36,7 @@ func New(zl *zap.Logger, shorter Shorter) *Router {
 	r.Get("/{id}", redirect.New(shorter))
 	r.Post("/", save.New(shorter))
 	r.Post("/api/shorten", shorten.New(shorter))
+	r.Get("/ping", ping.New(p))
 
 	return &Router{r}
 }
