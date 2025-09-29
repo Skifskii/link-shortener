@@ -5,6 +5,11 @@ import (
 	"errors"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var errEmptyDSN = errors.New("DSN is empty")
@@ -13,17 +18,40 @@ type PostgresqlRepo struct {
 	db *sql.DB
 }
 
-func NewPostgresqlRepo(dsn string) (*PostgresqlRepo, error) {
+func NewPostgresqlRepo(dsn string, zl *zap.Logger) (*PostgresqlRepo, error) {
 	if dsn == "" {
 		return nil, errEmptyDSN
 	}
 
+	// Запускаем миграции
+	if err := runMigration(dsn, zl); err != nil {
+		return nil, err
+	}
+
+	// Подключаемся к БД
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	return &PostgresqlRepo{db: db}, nil
+}
+
+func runMigration(dsn string, zl *zap.Logger) error {
+	m, err := migrate.New(
+		"file://./migrations",
+		dsn,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	zl.Info("Migrations applied successfully!")
+	return nil
 }
 
 func (pr *PostgresqlRepo) Save(short, original string) error {

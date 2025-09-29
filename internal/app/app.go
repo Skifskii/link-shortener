@@ -25,7 +25,7 @@ func Run() error {
 	// Репозиторий
 	var repo URLSaveGetter
 
-	pgrepo, err := postgresql.NewPostgresqlRepo(cfg.DatabaseDSN)
+	pgrepo, err := postgresql.NewPostgresqlRepo(cfg.DatabaseDSN, zl)
 	if err == nil {
 		// Пробуем использовать Postgres
 		defer pgrepo.Close()
