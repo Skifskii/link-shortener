@@ -27,6 +27,15 @@ func (r *InMemoryRepo) Save(short, original string) error {
 	return nil
 }
 
+func (r *InMemoryRepo) SaveBatch(shortURLs, longURLs []string) error {
+	for i, short := range shortURLs {
+		if err := r.Save(short, longURLs[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *InMemoryRepo) Get(short string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
