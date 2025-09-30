@@ -13,6 +13,8 @@ import (
 )
 
 var errEmptyDSN = errors.New("DSN is empty")
+var errDifferentSliceSizes = errors.New("slices are of different sizes")
+var errEmptyBatch = errors.New("batch is empty")
 
 type PostgresqlRepo struct {
 	db *sql.DB
@@ -61,6 +63,37 @@ func (pr *PostgresqlRepo) Save(short, original string) error {
 		original,
 	)
 	return err
+}
+
+func (pr *PostgresqlRepo) SaveBatch(shortURLs, longURLs []string) error {
+	if len(shortURLs) != len(longURLs) {
+		return errDifferentSliceSizes
+	}
+
+	if len(shortURLs) == 0 {
+		return errEmptyBatch
+	}
+
+	tx, err := pr.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT INTO links (short, original) VALUES ($1, $2)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for i, short := range shortURLs {
+		_, err := stmt.Exec(short, longURLs[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (pr *PostgresqlRepo) Get(short string) (original string, err error) {

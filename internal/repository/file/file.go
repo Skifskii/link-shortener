@@ -158,6 +158,15 @@ func (fr *FileRepo) Save(short, original string) error {
 	})
 }
 
+func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
+	for i, short := range shortURLs {
+		if err := fr.Save(short, longURLs[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (fr *FileRepo) Get(short string) (string, error) {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()

@@ -55,6 +55,7 @@ func Run() error {
 type URLSaveGetter interface {
 	Save(shortURL, longURL string) error
 	Get(shortURL string) (string, error)
+	SaveBatch(shortURLs, longURLs []string) error
 }
 
 func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {

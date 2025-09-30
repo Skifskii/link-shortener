@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/Skifskii/link-shortener/internal/model"
 )
 
 type URLSaveGetter interface {
 	Save(shortURL, longURL string) error
 	Get(shortURL string) (string, error)
+	SaveBatch(shortURLs, longURLs []string) error
 }
 
 type ShorterService struct {
@@ -36,6 +39,35 @@ func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
 	}
 
 	return shortURL, nil
+}
+
+func (s *ShorterService) BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error) {
+	respBatch = make([]model.ResponseArrayElement, 0, len(reqBatch))
+
+	longURLs := make([]string, 0, len(reqBatch))
+	shortURLs := make([]string, 0, len(reqBatch))
+
+	for _, req := range reqBatch {
+		longURLs = append(longURLs, req.OriginalURL)
+		shortCode, err := s.generateShortCode()
+		if err != nil {
+			return nil, err
+		}
+
+		shortURL := s.baseURL + "/" + shortCode
+		shortURLs = append(shortURLs, shortURL)
+
+		respBatch = append(respBatch, model.ResponseArrayElement{
+			CorrelationID: req.CorrelationID,
+			ShortURL:      shortURL,
+		})
+	}
+
+	if err := s.repo.SaveBatch(shortURLs, longURLs); err != nil {
+		return nil, err
+	}
+
+	return respBatch, nil
 }
 
 func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
