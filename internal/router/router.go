@@ -40,7 +40,7 @@ func New(zl *zap.Logger, shorter Shorter, p pinger) *Router {
 	r.Post("/", save.New(shorter))
 	r.Post("/api/shorten", shorten.New(shorter))
 	r.Get("/ping", ping.New(p))
-	r.Post("/api/shorten/batch", batch.New(shorter)) // TODO:
+	r.Post("/api/shorten/batch", batch.New(shorter))
 
 	return &Router{r}
 }

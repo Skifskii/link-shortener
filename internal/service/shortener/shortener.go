@@ -11,7 +11,7 @@ import (
 )
 
 type URLSaveGetter interface {
-	Save(shortURL, longURL string) error
+	Save(shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
 }
@@ -34,8 +34,8 @@ func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
 
 	shortURL = s.baseURL + "/" + shortCode
 
-	if err := s.repo.Save(shortURL, longURL); err != nil {
-		return "", err
+	if existingShort, err := s.repo.Save(shortURL, longURL); err != nil {
+		return existingShort, err
 	}
 
 	return shortURL, nil

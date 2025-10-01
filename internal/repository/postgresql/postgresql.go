@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/Skifskii/link-shortener/internal/repository"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 
@@ -56,13 +57,21 @@ func runMigration(dsn string, zl *zap.Logger) error {
 	return nil
 }
 
-func (pr *PostgresqlRepo) Save(short, original string) error {
-	_, err := pr.db.Exec(
-		"INSERT INTO links (short, original) VALUES ($1, $2)",
-		short,
-		original,
-	)
-	return err
+func (pr *PostgresqlRepo) Save(short, original string) (savedShort string, err error) {
+	err = pr.db.QueryRow(
+		`INSERT INTO links (short, original)
+		VALUES ($1, $2)
+		ON CONFLICT (original) DO UPDATE
+			SET short = links.short
+		RETURNING short`,
+		short, original,
+	).Scan(&savedShort)
+
+	if savedShort != short {
+		return savedShort, repository.ErrOriginalURLAlreadyExists
+	}
+
+	return "", err
 }
 
 func (pr *PostgresqlRepo) SaveBatch(shortURLs, longURLs []string) error {

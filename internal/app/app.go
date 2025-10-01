@@ -53,7 +53,7 @@ func Run() error {
 }
 
 type URLSaveGetter interface {
-	Save(shortURL, longURL string) error
+	Save(shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
 }

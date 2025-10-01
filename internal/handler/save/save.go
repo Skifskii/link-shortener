@@ -1,8 +1,11 @@
 package save
 
 import (
+	"errors"
 	"io"
 	"net/http"
+
+	"github.com/Skifskii/link-shortener/internal/repository"
 )
 
 type Shortener interface {
@@ -22,6 +25,11 @@ func New(s Shortener) http.HandlerFunc {
 
 		shortURL, err := s.Shorten(longURL)
 		if err != nil {
+			if errors.Is(err, repository.ErrOriginalURLAlreadyExists) {
+				w.WriteHeader(http.StatusConflict)
+				w.Write([]byte(shortURL))
+				return
+			}
 			http.Error(w, "Ошибка при генерации короткой ссылки", http.StatusInternalServerError)
 			return
 		}
