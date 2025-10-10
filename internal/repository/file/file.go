@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/Skifskii/link-shortener/internal/model"
 	"github.com/Skifskii/link-shortener/internal/repository"
 )
 
@@ -165,7 +166,7 @@ func NewFileRepo(filepath string) (*FileRepo, error) {
 	return &fileRepo, nil
 }
 
-func (fr *FileRepo) Save(short, original string) (existingShort string, err error) {
+func (fr *FileRepo) Save(_ int, short, original string) (existingShort string, err error) {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
 
@@ -192,7 +193,7 @@ func (fr *FileRepo) Save(short, original string) (existingShort string, err erro
 
 func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
 	for i, short := range shortURLs {
-		if _, err := fr.Save(short, longURLs[i]); err != nil { // TODO:
+		if _, err := fr.Save(0, short, longURLs[i]); err != nil { // TODO:
 			return err
 		}
 	}
@@ -209,4 +210,12 @@ func (fr *FileRepo) Get(short string) (string, error) {
 	}
 
 	return lr.OriginalURL, nil
+}
+
+func (fr *FileRepo) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
+	return []model.ResponsePairElement{}, nil
+}
+
+func (fr *FileRepo) CreateUser(username string) (userID int, err error) {
+	return -1, nil
 }
