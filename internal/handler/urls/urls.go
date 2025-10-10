@@ -31,6 +31,11 @@ func New(s Shortener) http.HandlerFunc {
 			return
 		}
 
+		if len(pairs) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		// сериализуем ответ сервера
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
