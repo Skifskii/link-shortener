@@ -3,10 +3,15 @@ package file
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
+
+	"github.com/Skifskii/link-shortener/internal/repository"
 )
+
+var errEmptyFilepath = errors.New("filepath is empty")
 
 type LinkRecord struct {
 	UUID        string `json:"uuid"`
@@ -92,7 +97,28 @@ func (fr *fileReader) readLinkRecordByShortURL(shortURL string) (*LinkRecord, er
 		return nil, err
 	}
 
-	return nil, fmt.Errorf("LinkRecord with short_url %q not found", shortURL)
+	return nil, repository.ErrShortNotFound
+}
+
+func (fr *fileReader) readLinkRecordByOriginalURL(originalURL string) (*LinkRecord, error) {
+	for fr.scanner.Scan() {
+		data := fr.scanner.Bytes()
+
+		var lr LinkRecord
+		if err := json.Unmarshal(data, &lr); err != nil {
+			return nil, err
+		}
+
+		if lr.OriginalURL == originalURL {
+			return &lr, nil
+		}
+	}
+
+	if err := fr.scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, repository.ErrOriginalNotFound
 }
 
 func (fr *fileReader) countRecords() (int, error) {
@@ -119,6 +145,10 @@ func (fr *fileReader) countRecords() (int, error) {
 }
 
 func NewFileRepo(filepath string) (*FileRepo, error) {
+	if filepath == "" {
+		return nil, errEmptyFilepath
+	}
+
 	fileRepo := FileRepo{}
 	var err error
 
@@ -135,20 +165,38 @@ func NewFileRepo(filepath string) (*FileRepo, error) {
 	return &fileRepo, nil
 }
 
-func (fr *FileRepo) Save(short, original string) error {
+func (fr *FileRepo) Save(short, original string) (existingShort string, err error) {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
 
-	lenFile, err := fr.countRecords()
-	if err != nil {
-		return err
+	// Проверяем, существует ли уже original в хранилище
+	lr, err := fr.readLinkRecordByOriginalURL(original)
+	if err == nil {
+		return lr.ShortURL, repository.ErrOriginalURLAlreadyExists
+	}
+	if !errors.Is(err, repository.ErrOriginalNotFound) {
+		return "", err
 	}
 
-	return fr.writeLinkRecord(&LinkRecord{
+	lenFile, err := fr.countRecords()
+	if err != nil {
+		return "", err
+	}
+
+	return "", fr.writeLinkRecord(&LinkRecord{
 		UUID:        fmt.Sprint(lenFile),
 		ShortURL:    short,
 		OriginalURL: original,
 	})
+}
+
+func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
+	for i, short := range shortURLs {
+		if _, err := fr.Save(short, longURLs[i]); err != nil { // TODO:
+			return err
+		}
+	}
+	return nil
 }
 
 func (fr *FileRepo) Get(short string) (string, error) {

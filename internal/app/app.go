@@ -1,32 +1,20 @@
 package app
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/Skifskii/link-shortener/internal/config"
-	"github.com/Skifskii/link-shortener/internal/handler/redirect"
-	"github.com/Skifskii/link-shortener/internal/handler/save"
-	"github.com/Skifskii/link-shortener/internal/handler/shorten"
 	"github.com/Skifskii/link-shortener/internal/logger"
-	"github.com/Skifskii/link-shortener/internal/middleware"
 	"github.com/Skifskii/link-shortener/internal/repository/file"
+	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
+	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
+	"github.com/Skifskii/link-shortener/internal/router"
+	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
-	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 func Run() error {
 	// Конфиг
 	cfg := config.New()
-
-	// Репозиторий
-	repo, err := file.NewFileRepo(cfg.FileStoragePath)
-	if err != nil {
-		return err
-	}
-
-	// Сервис сокращения ссылок
-	s := shortener.New(6)
 
 	// Логгер
 	zl, err := logger.Init(cfg.LogLevel)
@@ -34,14 +22,53 @@ func Run() error {
 		return err
 	}
 
-	// HTTP сервер
-	r := chi.NewRouter()
-	r.Use(logger.RequestLogger(zl))
-	r.Use(middleware.GzipMiddleware)
-	r.Get("/{id}", redirect.New(repo))
-	r.Post("/", save.New(repo, s, cfg.BaseURL))
-	r.Post("/api/shorten", shorten.New(repo, s, cfg.BaseURL))
+	// Репозиторий
+	var repo URLSaveGetter
 
-	fmt.Printf("Starting server at %s\n", cfg.Address)
-	return http.ListenAndServe(cfg.Address, r)
+	pgrepo, err := postgresql.NewPostgresqlRepo(cfg.DatabaseDSN, zl)
+	if err == nil {
+		// Пробуем использовать Postgres
+		defer pgrepo.Close()
+		repo = pgrepo
+		zl.Info("using postgresql as a storage")
+	} else {
+		// Ставим запасное хранилище
+		zl.Warn("can't use postgresql as a storage: ", zap.Error(err))
+
+		repo, err = chooseFallbackRepo(cfg, zl)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Сервис сокращения ссылок
+	s := shortener.New(cfg.BaseURL, 6, repo)
+
+	// Сервис проверки подключения к БД
+	dBPingService := dbping.New(pgrepo)
+
+	// HTTP сервер
+	r := router.New(zl, s, dBPingService)
+	return r.Run(cfg.Address)
+}
+
+type URLSaveGetter interface {
+	Save(shortURL, longURL string) (existingShort string, err error)
+	Get(shortURL string) (string, error)
+	SaveBatch(shortURLs, longURLs []string) error
+}
+
+func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {
+	var repo URLSaveGetter
+	var err error
+
+	// Пробуем использовать файловую систему
+	if repo, err = file.NewFileRepo(cfg.FileStoragePath); err == nil {
+		zl.Info("using filesystem as a storage")
+		return repo, nil
+	}
+	zl.Warn("can't use filesystem as a storage: ", zap.Error(err))
+
+	// Используем хранение в памяти
+	return inmemory.New(), nil
 }

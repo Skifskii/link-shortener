@@ -2,20 +2,18 @@ package shorten
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Skifskii/link-shortener/internal/model"
+	"github.com/Skifskii/link-shortener/internal/repository"
 )
 
-type ShortGenerator interface {
-	GenerateShort() (string, error)
+type Shortener interface {
+	Shorten(longURL string) (shortURL string, err error)
 }
 
-type URLSaver interface {
-	Save(shortURL, longURL string) error
-}
-
-func New(us URLSaver, s ShortGenerator, baseURL string) http.HandlerFunc {
+func New(s Shortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -30,26 +28,26 @@ func New(us URLSaver, s ShortGenerator, baseURL string) http.HandlerFunc {
 			return
 		}
 
+		status := http.StatusCreated
+
 		// Сокращаем ссылку
-
-		shortURL, err := s.GenerateShort()
+		shortURL, err := s.Shorten(req.URL)
 		if err != nil {
-			http.Error(w, "Ошибка при генерации короткой ссылки", http.StatusInternalServerError)
-			return
-		}
-
-		if err := us.Save(shortURL, string(req.URL)); err != nil {
-			http.Error(w, "Ошибка при сохранении ссылки", http.StatusInternalServerError)
-			return
+			if errors.Is(err, repository.ErrOriginalURLAlreadyExists) {
+				status = http.StatusConflict
+			} else {
+				http.Error(w, "Ошибка при генерации короткой ссылки", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		resp := model.Response{
-			Result: baseURL + "/" + shortURL,
+			Result: shortURL,
 		}
 
 		// сериализуем ответ сервера
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(status)
 
 		enc := json.NewEncoder(w)
 		enc.Encode(resp)
