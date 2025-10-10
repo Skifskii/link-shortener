@@ -7,6 +7,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
 	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
 	"github.com/Skifskii/link-shortener/internal/router"
+	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
 	"go.uber.org/zap"
@@ -47,8 +48,11 @@ func Run() error {
 	// Сервис проверки подключения к БД
 	dBPingService := dbping.New(pgrepo)
 
+	// Сервис аутентификации
+	authServiece := auth.New(pgrepo, cfg.SecretKey)
+
 	// HTTP сервер
-	r := router.New(zl, s, dBPingService)
+	r := router.New(zl, s, dBPingService, authServiece)
 	return r.Run(cfg.Address)
 }
 

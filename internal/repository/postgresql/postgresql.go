@@ -126,3 +126,14 @@ func (pr *PostgresqlRepo) Ping() error {
 func (pr *PostgresqlRepo) Close() error {
 	return pr.db.Close()
 }
+
+func (pr *PostgresqlRepo) CreateUser(username string) (userID int, err error) {
+	err = pr.db.QueryRow(
+		`INSERT INTO users (username)
+		VALUES ($1)
+		RETURNING id`,
+		username,
+	).Scan(&userID)
+
+	return userID, err
+}
