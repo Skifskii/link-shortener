@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/logger"
+	"github.com/Skifskii/link-shortener/internal/model"
 	"github.com/Skifskii/link-shortener/internal/repository/file"
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
 	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
@@ -49,7 +50,7 @@ func Run() error {
 	dBPingService := dbping.New(pgrepo)
 
 	// Сервис аутентификации
-	authServiece := auth.New(pgrepo, cfg.SecretKey)
+	authServiece := auth.New(repo, cfg.SecretKey)
 
 	// HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece)
@@ -57,9 +58,11 @@ func Run() error {
 }
 
 type URLSaveGetter interface {
-	Save(shortURL, longURL string) (existingShort string, err error)
+	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
+	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
+	CreateUser(username string) (userID int, err error)
 }
 
 func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {

@@ -1,13 +1,18 @@
 package urls
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
+	"github.com/Skifskii/link-shortener/internal/model"
 )
 
-func New() http.HandlerFunc {
+type Shortener interface {
+	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
+}
+
+func New(s Shortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -20,7 +25,17 @@ func New() http.HandlerFunc {
 			return
 		}
 
-		// TODO: возвращать все ссылки пользователя
-		fmt.Println(userID)
+		pairs, err := s.GetUserPairs(userID)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// сериализуем ответ сервера
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		enc := json.NewEncoder(w)
+		enc.Encode(pairs)
 	}
 }

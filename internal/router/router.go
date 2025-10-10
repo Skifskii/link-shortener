@@ -23,9 +23,10 @@ type Router struct {
 }
 
 type Shorter interface {
-	Shorten(longURL string) (shortURL string, err error)
+	Shorten(userID int, longURL string) (shortURL string, err error)
 	Redirect(shortURL string) (longURL string, err error)
 	BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
+	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }
 
 type pinger interface {
@@ -49,7 +50,7 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, a Auther) *Router {
 	r.Post("/api/shorten", shorten.New(shorter))
 	r.Get("/ping", ping.New(p))
 	r.Post("/api/shorten/batch", batch.New(shorter))
-	r.Get("/api/user/urls", urls.New())
+	r.Get("/api/user/urls", urls.New(shorter))
 
 	return &Router{r}
 }
