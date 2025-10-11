@@ -79,7 +79,7 @@ func (pr *PostgresqlRepo) Save(userID int, short, original string) (savedShort s
 		userID, linkID,
 	)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	if savedShort != short {
@@ -122,13 +122,18 @@ func (pr *PostgresqlRepo) SaveBatch(shortURLs, longURLs []string) error {
 
 func (pr *PostgresqlRepo) Get(short string) (original string, err error) {
 	row := pr.db.QueryRow(
-		"SELECT original FROM links WHERE short = $1 LIMIT 1",
+		"SELECT original, is_deleted FROM links WHERE short = $1 LIMIT 1",
 		short,
 	)
 
-	err = row.Scan(&original)
+	var isDeleted bool
+	err = row.Scan(&original, &isDeleted)
 	if err != nil {
 		return "", err
+	}
+
+	if isDeleted {
+		return "", repository.ErrLinkDeleted
 	}
 
 	return original, nil
@@ -184,5 +189,21 @@ func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement,
 }
 
 func (pr *PostgresqlRepo) DeleteLinkByShort(userID int, shortURL string) error {
-	return nil // TODO:
+	_, err := pr.db.Exec(
+		`UPDATE links
+		SET is_deleted = TRUE
+		WHERE id = (
+			SELECT l.id
+			FROM links AS l
+			JOIN users_links AS ul ON ul.link_id = l.id
+			WHERE l.short = $1 AND ul.user_id = $2
+			LIMIT 1
+		);`,
+		shortURL, userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
