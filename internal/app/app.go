@@ -63,6 +63,7 @@ type URLSaveGetter interface {
 	SaveBatch(shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	CreateUser(username string) (userID int, err error)
+	DeleteLinkByShort(userID int, shortURL string) error
 }
 
 func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {

@@ -3,7 +3,6 @@ package shortener
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -15,6 +14,7 @@ type URLSaveGetter interface {
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
+	DeleteLinkByShort(userID int, shortURL string) error
 }
 
 type ShorterService struct {
@@ -74,7 +74,7 @@ func (s *ShorterService) BatchShorten(reqBatch []model.RequestArrayElement) (res
 func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
 	longURL, err = s.repo.Get(s.baseURL + "/" + shortURL)
 	if err != nil {
-		return "", fmt.Errorf("ссылка не найдена: %w", err)
+		return "", err
 	}
 
 	// защита от пустой строки в хранилище
@@ -106,4 +106,18 @@ func (s *ShorterService) generateShortCode() (string, error) {
 
 func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
 	return s.repo.GetUserPairs(userID)
+}
+
+func (s *ShorterService) DeleteUserLinks(userID int, shortURLs []string) error {
+	for _, short := range shortURLs {
+		if err := s.deleteUserLink(userID, short); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *ShorterService) deleteUserLink(userID int, shortURL string) error {
+	return s.repo.DeleteLinkByShort(userID, s.baseURL+"/"+shortURL)
 }

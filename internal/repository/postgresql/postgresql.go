@@ -182,3 +182,7 @@ func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement,
 
 	return pairs, nil
 }
+
+func (pr *PostgresqlRepo) DeleteLinkByShort(userID int, shortURL string) error {
+	return nil // TODO:
+}

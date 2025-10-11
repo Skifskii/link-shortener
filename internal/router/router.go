@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Skifskii/link-shortener/internal/handler/batch"
+	"github.com/Skifskii/link-shortener/internal/handler/delete"
 	"github.com/Skifskii/link-shortener/internal/handler/ping"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
@@ -27,6 +28,7 @@ type Shorter interface {
 	Redirect(shortURL string) (longURL string, err error)
 	BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
+	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
 type pinger interface {
@@ -51,6 +53,7 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, a Auther) *Router {
 	r.Get("/ping", ping.New(p))
 	r.Post("/api/shorten/batch", batch.New(shorter))
 	r.Get("/api/user/urls", urls.New(shorter))
+	r.Delete("/api/user/urls", delete.New(shorter))
 
 	return &Router{r}
 }

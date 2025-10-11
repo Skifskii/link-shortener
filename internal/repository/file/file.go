@@ -219,3 +219,7 @@ func (fr *FileRepo) GetUserPairs(userID int) ([]model.ResponsePairElement, error
 func (fr *FileRepo) CreateUser(username string) (userID int, err error) {
 	return -1, nil
 }
+
+func (fr *FileRepo) DeleteLinkByShort(userID int, shortURL string) error {
+	return nil // TODO:
+}
