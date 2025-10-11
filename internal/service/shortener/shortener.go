@@ -3,7 +3,6 @@ package shortener
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -11,9 +10,11 @@ import (
 )
 
 type URLSaveGetter interface {
-	Save(shortURL, longURL string) (existingShort string, err error)
+	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
+	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
+	DeleteLinkByShort(userID int, shortURL string) error
 }
 
 type ShorterService struct {
@@ -26,7 +27,7 @@ func New(baseURL string, length int, repo URLSaveGetter) *ShorterService {
 	return &ShorterService{baseURL: baseURL, length: length, repo: repo}
 }
 
-func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
+func (s *ShorterService) Shorten(userID int, longURL string) (shortURL string, err error) {
 	shortCode, err := s.generateShortCode()
 	if err != nil {
 		return "", err
@@ -34,7 +35,7 @@ func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
 
 	shortURL = s.baseURL + "/" + shortCode
 
-	if existingShort, err := s.repo.Save(shortURL, longURL); err != nil {
+	if existingShort, err := s.repo.Save(userID, shortURL, longURL); err != nil {
 		return existingShort, err
 	}
 
@@ -73,7 +74,7 @@ func (s *ShorterService) BatchShorten(reqBatch []model.RequestArrayElement) (res
 func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
 	longURL, err = s.repo.Get(s.baseURL + "/" + shortURL)
 	if err != nil {
-		return "", fmt.Errorf("ссылка не найдена: %w", err)
+		return "", err
 	}
 
 	// защита от пустой строки в хранилище
@@ -101,4 +102,22 @@ func (s *ShorterService) generateShortCode() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
+	return s.repo.GetUserPairs(userID)
+}
+
+func (s *ShorterService) DeleteUserLinks(userID int, shortURLs []string) error {
+	for _, short := range shortURLs {
+		if err := s.deleteUserLink(userID, short); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *ShorterService) deleteUserLink(userID int, shortURL string) error {
+	return s.repo.DeleteLinkByShort(userID, s.baseURL+"/"+shortURL)
 }
