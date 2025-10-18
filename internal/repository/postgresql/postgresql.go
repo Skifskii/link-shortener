@@ -188,6 +188,10 @@ func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement,
 	return pairs, nil
 }
 
+func (pr *PostgresqlRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
+	return nil // TODO:
+}
+
 func (pr *PostgresqlRepo) DeleteLinkByShort(userID int, shortURL string) error {
 	_, err := pr.db.Exec(
 		`UPDATE links

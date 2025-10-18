@@ -14,7 +14,7 @@ type URLSaveGetter interface {
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
-	DeleteLinkByShort(userID int, shortURL string) error
+	DeleteBatchOfLinks(userID int, shortURL []string) error
 }
 
 type ShorterService struct {
@@ -109,15 +109,5 @@ func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, 
 }
 
 func (s *ShorterService) DeleteUserLinks(userID int, shortURLs []string) error {
-	for _, short := range shortURLs {
-		if err := s.deleteUserLink(userID, short); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *ShorterService) deleteUserLink(userID int, shortURL string) error {
-	return s.repo.DeleteLinkByShort(userID, s.baseURL+"/"+shortURL)
+	return s.repo.DeleteBatchOfLinks(userID, shortURLs)
 }

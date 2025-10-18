@@ -93,7 +93,16 @@ func (r *InMemoryRepo) CreateUser(username string) (userID int, err error) {
 	return -1, errors.New("failed creating user")
 }
 
-func (r *InMemoryRepo) DeleteLinkByShort(userID int, shortURL string) error {
+func (r *InMemoryRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
+	for _, short := range shortURLs {
+		if err := r.deleteLinkByShort(userID, short); err != nil { // TODO: здесь не передается baseURL. Нужно изменить логику Save - хранить только сокращенную ссылку, и добавить в ShortenerService функцию добавления baseURL.
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *InMemoryRepo) deleteLinkByShort(userID int, shortURL string) error {
 	user, ok := r.users[userID]
 	if !ok {
 		return fmt.Errorf("can't find user with user_id=%d", userID)

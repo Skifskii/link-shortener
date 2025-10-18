@@ -220,6 +220,6 @@ func (fr *FileRepo) CreateUser(username string) (userID int, err error) {
 	return -1, nil
 }
 
-func (fr *FileRepo) DeleteLinkByShort(userID int, shortURL string) error {
+func (fr *FileRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
 	return nil // TODO:
 }
