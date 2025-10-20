@@ -3,6 +3,8 @@ package postgresql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/Skifskii/link-shortener/internal/model"
 	"github.com/Skifskii/link-shortener/internal/repository"
@@ -19,7 +21,13 @@ var errDifferentSliceSizes = errors.New("slices are of different sizes")
 var errEmptyBatch = errors.New("batch is empty")
 
 type PostgresqlRepo struct {
-	db *sql.DB
+	db          *sql.DB
+	delTaskChan chan deleteTask
+}
+
+type deleteTask struct {
+	userID   int
+	shortURL string
 }
 
 func NewPostgresqlRepo(dsn string, zl *zap.Logger) (*PostgresqlRepo, error) {
@@ -38,7 +46,83 @@ func NewPostgresqlRepo(dsn string, zl *zap.Logger) (*PostgresqlRepo, error) {
 		return nil, err
 	}
 
-	return &PostgresqlRepo{db: db}, nil
+	repo := &PostgresqlRepo{
+		db:          db,
+		delTaskChan: make(chan deleteTask, 100),
+	}
+
+	go repo.deleteWorker()
+
+	return repo, nil
+}
+
+func (pr *PostgresqlRepo) deleteWorker() {
+	ticker := time.NewTicker(10 * time.Second)
+
+	var tasks []deleteTask
+
+	for {
+		select {
+		case dt := <-pr.delTaskChan:
+			tasks = append(tasks, dt)
+		case <-ticker.C:
+			if len(tasks) == 0 {
+				continue
+			}
+			pr.completeDeleteTasks(tasks)
+			tasks = nil
+		}
+	}
+}
+
+func (pr *PostgresqlRepo) completeDeleteTasks(tasks []deleteTask) {
+	if len(tasks) == 0 {
+		return
+	}
+
+	tx, err := pr.db.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(
+		`UPDATE links
+		SET is_deleted = TRUE
+		WHERE id = (
+			SELECT l.id
+			FROM links AS l
+			JOIN users_links AS ul ON ul.link_id = l.id
+			WHERE l.short = $1 AND ul.user_id = $2
+			LIMIT 1
+		);`)
+	if err != nil {
+		fmt.Printf("tx.Prepare error")
+		return
+	}
+	defer stmt.Close()
+
+	for _, task := range tasks {
+		_, err := stmt.Exec(task.shortURL, task.userID)
+		if err != nil {
+			fmt.Printf("stmt.Exec error")
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		fmt.Printf("tx.Commit error")
+	}
+}
+
+func (pr *PostgresqlRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
+	go func() {
+		for _, shortURL := range shortURLs {
+			pr.delTaskChan <- deleteTask{userID, shortURL}
+		}
+	}()
+
+	return nil
 }
 
 func runMigration(dsn string, zl *zap.Logger) error {
@@ -186,28 +270,4 @@ func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement,
 	}
 
 	return pairs, nil
-}
-
-func (pr *PostgresqlRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
-	return nil // TODO:
-}
-
-func (pr *PostgresqlRepo) DeleteLinkByShort(userID int, shortURL string) error {
-	_, err := pr.db.Exec(
-		`UPDATE links
-		SET is_deleted = TRUE
-		WHERE id = (
-			SELECT l.id
-			FROM links AS l
-			JOIN users_links AS ul ON ul.link_id = l.id
-			WHERE l.short = $1 AND ul.user_id = $2
-			LIMIT 1
-		);`,
-		shortURL, userID,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -109,5 +109,9 @@ func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, 
 }
 
 func (s *ShorterService) DeleteUserLinks(userID int, shortURLs []string) error {
+	for i := 0; i < len(shortURLs); i++ {
+		shortURLs[i] = s.baseURL + "/" + shortURLs[i]
+	}
+
 	return s.repo.DeleteBatchOfLinks(userID, shortURLs)
 }
