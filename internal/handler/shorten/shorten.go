@@ -5,12 +5,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/model"
 	"github.com/Skifskii/link-shortener/internal/repository"
 )
 
 type Shortener interface {
-	Shorten(longURL string) (shortURL string, err error)
+	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
 func New(s Shortener) http.HandlerFunc {
@@ -30,8 +31,14 @@ func New(s Shortener) http.HandlerFunc {
 
 		status := http.StatusCreated
 
+		userID, ok := r.Context().Value(authmw.UserIDKey).(int)
+		if !ok {
+			http.Error(w, "Ошибка при определении user_id", http.StatusInternalServerError)
+			return
+		}
+
 		// Сокращаем ссылку
-		shortURL, err := s.Shorten(req.URL)
+		shortURL, err := s.Shorten(userID, req.URL)
 		if err != nil {
 			if errors.Is(err, repository.ErrOriginalURLAlreadyExists) {
 				status = http.StatusConflict

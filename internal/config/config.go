@@ -15,6 +15,7 @@ type Config struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	SecretKey       string `env:"SECRET_KEY"`
 }
 
 func New() *Config {
@@ -26,6 +27,7 @@ func New() *Config {
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level (debug, info, warn, error)")
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
+	flag.StringVar(&cfg.DatabaseDSN, "s", "", "secret key")
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)

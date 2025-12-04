@@ -11,9 +11,10 @@ import (
 )
 
 type URLSaveGetter interface {
-	Save(shortURL, longURL string) (existingShort string, err error)
+	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
 	SaveBatch(shortURLs, longURLs []string) error
+	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }
 
 type ShorterService struct {
@@ -26,7 +27,7 @@ func New(baseURL string, length int, repo URLSaveGetter) *ShorterService {
 	return &ShorterService{baseURL: baseURL, length: length, repo: repo}
 }
 
-func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
+func (s *ShorterService) Shorten(userID int, longURL string) (shortURL string, err error) {
 	shortCode, err := s.generateShortCode()
 	if err != nil {
 		return "", err
@@ -34,7 +35,7 @@ func (s *ShorterService) Shorten(longURL string) (shortURL string, err error) {
 
 	shortURL = s.baseURL + "/" + shortCode
 
-	if existingShort, err := s.repo.Save(shortURL, longURL); err != nil {
+	if existingShort, err := s.repo.Save(userID, shortURL, longURL); err != nil {
 		return existingShort, err
 	}
 
@@ -101,4 +102,8 @@ func (s *ShorterService) generateShortCode() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
+	return s.repo.GetUserPairs(userID)
 }
