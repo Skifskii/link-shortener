@@ -50,6 +50,6 @@ func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 		w.Write([]byte(shortURL))
 
 		// После успешного запроса отправляем уведомление
-		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, longURL))
+		go auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, longURL))
 	}
 }

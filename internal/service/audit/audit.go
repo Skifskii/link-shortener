@@ -12,21 +12,25 @@ type AuditService struct {
 }
 
 type observer interface {
-	update(*Event)
+	Update(*Event)
 }
 
 func New() *AuditService {
-	return &AuditService{}
+	return &AuditService{
+		observers: make([]observer, 0),
+	}
 }
 
 func (a *AuditService) NotifyAll(e *Event) {
 	for _, observer := range a.observers {
-		observer.update(e)
+		observer.Update(e)
 	}
 }
 
 func (a *AuditService) Register(o observer) {
-	a.observers = append(a.observers, o)
+	if o != nil {
+		a.observers = append(a.observers, o)
+	}
 }
 
 type Event struct {

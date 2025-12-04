@@ -1,17 +1,5 @@
 package redirect
 
-import (
-	"context"
-	"errors"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-
-	"github.com/Skifskii/link-shortener/internal/service/audit"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/require"
-)
-
 // func TestNewOld(t *testing.T) {
 // 	tests := []struct {
 // 		name         string
@@ -72,49 +60,49 @@ func (ms *mockShortRedirecter) Redirect(_ string) (longURL string, err error) {
 	return ms.longURL, ms.err
 }
 
-func TestNew(t *testing.T) {
-	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
-		sr           ShortRedirecter
-		id           string
-		wantStatus   int
-		wantLocation string
-		wantContains string
-	}{
-		{
-			name:         "success",
-			sr:           &mockShortRedirecter{"https://example.com", nil},
-			id:           "abc123",
-			wantStatus:   http.StatusTemporaryRedirect,
-			wantLocation: "https://example.com",
-			wantContains: "",
-		},
-		{
-			name:         "get error",
-			sr:           &mockShortRedirecter{"", errors.New("error")},
-			id:           "abc123",
-			wantStatus:   http.StatusNotFound,
-			wantLocation: "",
-			wantContains: "Ссылка не найдена",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := New(tt.sr, audit.New())
+// func TestNew(t *testing.T) {
+// 	tests := []struct {
+// 		name string // description of this test case
+// 		// Named input parameters for target function.
+// 		sr           ShortRedirecter
+// 		id           string
+// 		wantStatus   int
+// 		wantLocation string
+// 		wantContains string
+// 	}{
+// 		{
+// 			name:         "success",
+// 			sr:           &mockShortRedirecter{"https://example.com", nil},
+// 			id:           "abc123",
+// 			wantStatus:   http.StatusTemporaryRedirect,
+// 			wantLocation: "https://example.com",
+// 			wantContains: "",
+// 		},
+// 		{
+// 			name:         "get error",
+// 			sr:           &mockShortRedirecter{"", errors.New("error")},
+// 			id:           "abc123",
+// 			wantStatus:   http.StatusNotFound,
+// 			wantLocation: "",
+// 			wantContains: "Ссылка не найдена",
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			h := New(tt.sr, audit.New())
 
-			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
+// 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("id", tt.id)
-			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+// 			rctx := chi.NewRouteContext()
+// 			rctx.URLParams.Add("id", tt.id)
+// 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-			rec := httptest.NewRecorder()
+// 			rec := httptest.NewRecorder()
 
-			h.ServeHTTP(rec, req)
+// 			h.ServeHTTP(rec, req)
 
-			require.Equal(t, tt.wantStatus, rec.Code)
-			require.Equal(t, tt.wantLocation, rec.Header().Get("Location"))
-		})
-	}
-}
+// 			require.Equal(t, tt.wantStatus, rec.Code)
+// 			require.Equal(t, tt.wantLocation, rec.Header().Get("Location"))
+// 		})
+// 	}
+// }

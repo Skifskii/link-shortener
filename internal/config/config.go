@@ -16,6 +16,8 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	SecretKey       string `env:"SECRET_KEY"`
+	AuditFile       string `env:"AUDIT_FILE"`
+	AuditURL        string `env:"AUDIT_URL"`
 }
 
 func New() *Config {
@@ -28,6 +30,8 @@ func New() *Config {
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
 	flag.StringVar(&cfg.SecretKey, "s", "", "secret key")
+	flag.StringVar(&cfg.AuditFile, "audit-file", "", "secret key")
+	flag.StringVar(&cfg.AuditURL, "audit-url", "", "secret key")
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)

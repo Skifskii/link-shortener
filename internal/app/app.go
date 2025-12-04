@@ -9,6 +9,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
 	"github.com/Skifskii/link-shortener/internal/router"
 	"github.com/Skifskii/link-shortener/internal/service/audit"
+	"github.com/Skifskii/link-shortener/internal/service/audit/fileobs"
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
@@ -55,7 +56,9 @@ func Run() error {
 
 	// Сервис аудита запросов
 	auditService := audit.New()
-	// auditService.Register() // TODO:
+	if cfg.AuditFile != "" {
+		auditService.Register(fileobs.New(cfg.AuditFile))
+	}
 
 	// HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece, auditService)
