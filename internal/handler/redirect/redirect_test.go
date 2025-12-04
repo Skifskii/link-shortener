@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 )
@@ -100,7 +101,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := New(tt.sr)
+			h := New(tt.sr, audit.New())
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 

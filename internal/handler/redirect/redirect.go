@@ -4,7 +4,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/repository"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -12,7 +14,11 @@ type ShortRedirecter interface {
 	Redirect(shortURL string) (longURL string, err error)
 }
 
-func New(sr ShortRedirecter) http.HandlerFunc {
+type AuditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+func New(sr ShortRedirecter, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		if shortURL == "" {
@@ -32,5 +38,9 @@ func New(sr ShortRedirecter) http.HandlerFunc {
 
 		w.Header().Set("Location", longURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+
+		// После успешного запроса отправляем уведомление
+		userID := r.Context().Value(authmw.UserIDKey).(int)
+		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.FollowAction, longURL))
 	}
 }

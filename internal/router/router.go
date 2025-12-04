@@ -15,6 +15,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/middleware/gzipmw"
 	"github.com/Skifskii/link-shortener/internal/model"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
@@ -40,16 +41,22 @@ type Auther interface {
 	GetUserID(tokenString string) (int, error)
 }
 
-func New(zl *zap.Logger, shorter Shorter, p pinger, a Auther) *Router {
+type auditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier) *Router {
 	r := chi.NewRouter()
 
+	// middlewares
 	r.Use(logger.RequestLogger(zl))
-	r.Use(authmw.AuthMiddleware(a))
+	r.Use(authmw.AuthMiddleware(auth))
 	r.Use(gzipmw.GzipMiddleware)
 
-	r.Get("/{id}", redirect.New(shorter))
-	r.Post("/", save.New(shorter))
-	r.Post("/api/shorten", shorten.New(shorter))
+	// handlers
+	r.Get("/{id}", redirect.New(shorter, aud))
+	r.Post("/", save.New(shorter, aud))
+	r.Post("/api/shorten", shorten.New(shorter, aud))
 	r.Get("/ping", ping.New(p))
 	r.Post("/api/shorten/batch", batch.New(shorter))
 	r.Get("/api/user/urls", urls.New(shorter))

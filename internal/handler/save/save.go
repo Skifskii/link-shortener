@@ -7,13 +7,18 @@ import (
 
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/repository"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
 type Shortener interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
-func New(s Shortener) http.HandlerFunc {
+type AuditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -43,5 +48,8 @@ func New(s Shortener) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortURL))
+
+		// После успешного запроса отправляем уведомление
+		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, longURL))
 	}
 }

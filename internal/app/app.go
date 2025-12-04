@@ -8,6 +8,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
 	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
 	"github.com/Skifskii/link-shortener/internal/router"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
@@ -52,8 +53,12 @@ func Run() error {
 	// Сервис аутентификации
 	authServiece := auth.New(repo, cfg.SecretKey)
 
+	// Сервис аудита запросов
+	auditService := audit.New()
+	// auditService.Register() // TODO:
+
 	// HTTP сервер
-	r := router.New(zl, s, dBPingService, authServiece)
+	r := router.New(zl, s, dBPingService, authServiece, auditService)
 	return r.Run(cfg.Address)
 }
 
