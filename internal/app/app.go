@@ -10,6 +10,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/router"
 	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/Skifskii/link-shortener/internal/service/audit/fileobs"
+	"github.com/Skifskii/link-shortener/internal/service/audit/urlobs"
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
@@ -58,6 +59,9 @@ func Run() error {
 	auditService := audit.New()
 	if cfg.AuditFile != "" {
 		auditService.Register(fileobs.New(cfg.AuditFile))
+	}
+	if cfg.AuditURL != "" {
+		auditService.Register(urlobs.New(cfg.AuditURL))
 	}
 
 	// HTTP сервер
