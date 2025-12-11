@@ -4,17 +4,24 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
 type BatchShortener interface {
-	BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
+	BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 }
 
 func New(bs BatchShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		userID, ok := r.Context().Value(authmw.UserIDKey).(int)
+		if !ok {
+			http.Error(w, "Ошибка при определении user_id", http.StatusInternalServerError)
 			return
 		}
 
@@ -47,7 +54,7 @@ func New(bs BatchShortener) http.HandlerFunc {
 			reqBatch = append(reqBatch, el)
 
 			if len(reqBatch) >= maxBatchSize {
-				respBatch, err := bs.BatchShorten(reqBatch)
+				respBatch, err := bs.BatchShorten(userID, reqBatch)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -58,7 +65,7 @@ func New(bs BatchShortener) http.HandlerFunc {
 		}
 
 		if len(reqBatch) > 0 {
-			respBatch, err := bs.BatchShorten(reqBatch)
+			respBatch, err := bs.BatchShorten(userID, reqBatch)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

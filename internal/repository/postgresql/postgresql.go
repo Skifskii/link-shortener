@@ -159,7 +159,8 @@ func (pr *PostgresqlRepo) Save(userID int, short, original string) (savedShort s
 
 	_, err = pr.db.Exec(
 		`INSERT INTO users_links (user_id, link_id)
-		VALUES ($1, $2)`,
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, link_id) DO NOTHING`,
 		userID, linkID,
 	)
 	if err != nil {
@@ -173,7 +174,7 @@ func (pr *PostgresqlRepo) Save(userID int, short, original string) (savedShort s
 	return "", nil
 }
 
-func (pr *PostgresqlRepo) SaveBatch(shortURLs, longURLs []string) error {
+func (pr *PostgresqlRepo) SaveBatch(userID int, shortURLs, longURLs []string) error {
 	if len(shortURLs) != len(longURLs) {
 		return errDifferentSliceSizes
 	}
@@ -188,14 +189,36 @@ func (pr *PostgresqlRepo) SaveBatch(shortURLs, longURLs []string) error {
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare("INSERT INTO links (short, original) VALUES ($1, $2)")
+	stmtLinks, err := tx.Prepare(`
+		INSERT INTO links (short, original)
+		VALUES ($1, $2)
+		ON CONFLICT (original) DO UPDATE
+			SET short = links.short
+		RETURNING id;
+	`)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer stmtLinks.Close()
+
+	stmtUsersLinks, err := tx.Prepare(`
+		INSERT INTO users_links (user_id, link_id)
+			VALUES ($1, $2)
+			ON CONFLICT (user_id, link_id) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmtLinks.Close()
 
 	for i, short := range shortURLs {
-		_, err := stmt.Exec(short, longURLs[i])
+		var linkID int
+		err := stmtLinks.QueryRow(short, longURLs[i]).Scan(&linkID)
+		if err != nil {
+			return err
+		}
+
+		_, err = stmtUsersLinks.Exec(userID, linkID)
 		if err != nil {
 			return err
 		}

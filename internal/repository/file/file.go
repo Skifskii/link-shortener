@@ -191,7 +191,7 @@ func (fr *FileRepo) Save(_ int, short, original string) (existingShort string, e
 	})
 }
 
-func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
+func (fr *FileRepo) SaveBatch(userID int, shortURLs, longURLs []string) error {
 	for i, short := range shortURLs {
 		if _, err := fr.Save(0, short, longURLs[i]); err != nil { // TODO:
 			return err

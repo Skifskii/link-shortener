@@ -45,7 +45,9 @@ func (u *URLObserver) notifyRemoteService(e audit.Event) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := u.client.Do(req)
-	resp.Body.Close()
+	if resp != nil {
+		resp.Body.Close()
+	}
 
 	return err
 }

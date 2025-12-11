@@ -72,7 +72,7 @@ func Run() error {
 type URLSaveGetter interface {
 	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
-	SaveBatch(shortURLs, longURLs []string) error
+	SaveBatch(userID int, shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	CreateUser(username string) (userID int, err error)
 	DeleteBatchOfLinks(userID int, shortURL []string) error

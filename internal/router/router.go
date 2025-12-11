@@ -27,7 +27,7 @@ type Router struct {
 type Shorter interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 	Redirect(shortURL string) (longURL string, err error)
-	BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
+	BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
@@ -55,22 +55,19 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 
 	// handlers
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{id}", redirect.New(shorter, aud))
 		r.Post("/", save.New(shorter, aud))
+		r.Get("/{id}", redirect.New(shorter, aud))
 	})
-
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/shorten", func(r chi.Router) {
 			r.Post("/", shorten.New(shorter, aud))
 			r.Post("/batch", batch.New(shorter))
 		})
-
 		r.Route("/user", func(r chi.Router) {
 			r.Get("/urls", urls.New(shorter))
 			r.Delete("/urls", urls.NewDelete(shorter))
 		})
 	})
-
 	r.Get("/ping", ping.New(p))
 
 	return &Router{r}

@@ -48,7 +48,7 @@ func (r *InMemoryRepo) Save(userID int, short, original string) (savedShort stri
 	return "", nil
 }
 
-func (r *InMemoryRepo) SaveBatch(shortURLs, longURLs []string) error {
+func (r *InMemoryRepo) SaveBatch(_ int, shortURLs, longURLs []string) error {
 	for i, short := range shortURLs {
 		if _, err := r.Save(0, short, longURLs[i]); err != nil { // TODO:
 			return err

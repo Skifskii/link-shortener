@@ -12,7 +12,7 @@ import (
 type URLSaveGetter interface {
 	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
-	SaveBatch(shortURLs, longURLs []string) error
+	SaveBatch(userID int, shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	DeleteBatchOfLinks(userID int, shortURL []string) error
 }
@@ -42,7 +42,7 @@ func (s *ShorterService) Shorten(userID int, longURL string) (shortURL string, e
 	return shortURL, nil
 }
 
-func (s *ShorterService) BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error) {
+func (s *ShorterService) BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error) {
 	respBatch = make([]model.ResponseArrayElement, 0, len(reqBatch))
 
 	longURLs := make([]string, 0, len(reqBatch))
@@ -64,7 +64,7 @@ func (s *ShorterService) BatchShorten(reqBatch []model.RequestArrayElement) (res
 		})
 	}
 
-	if err := s.repo.SaveBatch(shortURLs, longURLs); err != nil {
+	if err := s.repo.SaveBatch(userID, shortURLs, longURLs); err != nil {
 		return nil, err
 	}
 
