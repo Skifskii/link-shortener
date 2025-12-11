@@ -1,4 +1,4 @@
-package delete
+package urls
 
 import (
 	"encoding/json"
@@ -7,11 +7,11 @@ import (
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 )
 
-type Shortener interface {
+type UserLinksDeleter interface {
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
-func New(s Shortener) http.HandlerFunc {
+func NewDelete(u UserLinksDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -32,7 +32,7 @@ func New(s Shortener) http.HandlerFunc {
 			return
 		}
 
-		if err := s.DeleteUserLinks(userID, shortURLs); err != nil {
+		if err := u.DeleteUserLinks(userID, shortURLs); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

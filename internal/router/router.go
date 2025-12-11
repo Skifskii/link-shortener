@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Skifskii/link-shortener/internal/handler/batch"
-	"github.com/Skifskii/link-shortener/internal/handler/delete"
+	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
+	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
+	"github.com/Skifskii/link-shortener/internal/handler/api/user/urls"
 	"github.com/Skifskii/link-shortener/internal/handler/ping"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
-	"github.com/Skifskii/link-shortener/internal/handler/shorten"
-	"github.com/Skifskii/link-shortener/internal/handler/urls"
+
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/middleware/gzipmw"
@@ -54,13 +54,24 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 	r.Use(gzipmw.GzipMiddleware)
 
 	// handlers
-	r.Get("/{id}", redirect.New(shorter, aud))
-	r.Post("/", save.New(shorter, aud))
-	r.Post("/api/shorten", shorten.New(shorter, aud))
+	r.Route("/", func(r chi.Router) {
+		r.Get("/{id}", redirect.New(shorter, aud))
+		r.Post("/", save.New(shorter, aud))
+	})
+
+	r.Route("/api", func(r chi.Router) {
+		r.Route("/shorten", func(r chi.Router) {
+			r.Post("/", shorten.New(shorter, aud))
+			r.Post("/batch", batch.New(shorter))
+		})
+
+		r.Route("/user", func(r chi.Router) {
+			r.Get("/urls", urls.New(shorter))
+			r.Delete("/urls", urls.NewDelete(shorter))
+		})
+	})
+
 	r.Get("/ping", ping.New(p))
-	r.Post("/api/shorten/batch", batch.New(shorter))
-	r.Get("/api/user/urls", urls.New(shorter))
-	r.Delete("/api/user/urls", delete.New(shorter))
 
 	return &Router{r}
 }

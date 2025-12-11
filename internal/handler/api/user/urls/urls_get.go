@@ -8,11 +8,11 @@ import (
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
-type Shortener interface {
+type UserPairsGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }
 
-func New(s Shortener) http.HandlerFunc {
+func New(u UserPairsGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -25,7 +25,7 @@ func New(s Shortener) http.HandlerFunc {
 			return
 		}
 
-		pairs, err := s.GetUserPairs(userID)
+		pairs, err := u.GetUserPairs(userID)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
