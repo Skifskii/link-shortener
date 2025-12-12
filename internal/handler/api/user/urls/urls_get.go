@@ -9,6 +9,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
+// UserPairsGetter интерфейс для получения списка пар short->original пользователя.
 type UserPairsGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }

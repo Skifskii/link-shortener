@@ -11,10 +11,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// ShortRedirecter интерфейс предоставляет метод для получения оригинального URL
+// по короткой части ссылки (без baseURL).
 type ShortRedirecter interface {
 	Redirect(shortURL string) (longURL string, err error)
 }
 
+// AuditEventNotifier интерфейс для отправки событий аудита.
 type AuditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }

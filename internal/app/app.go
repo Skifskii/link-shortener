@@ -72,6 +72,8 @@ func Run() error {
 	return r.Run(cfg.Address)
 }
 
+// URLSaveGetter определяет набор методов, которые приложение ожидает от
+// репозитория для сохранения и получения URL-ов (используется и в app, и в сервисе сокращения).
 type URLSaveGetter interface {
 	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)

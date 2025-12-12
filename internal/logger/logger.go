@@ -37,12 +37,14 @@ type loggingResponseWriter struct {
 	responseData *responseData
 }
 
+// Write записывает данные в ответ и обновляет размер ответа.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader записывает заголовок ответа с указанным статусом кода.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode

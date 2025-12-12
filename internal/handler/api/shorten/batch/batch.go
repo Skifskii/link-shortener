@@ -9,6 +9,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
+// BatchShortener интерфейс для сервисов, поддерживающих пакетное сокращение ссылок.
 type BatchShortener interface {
 	BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 }

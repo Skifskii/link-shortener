@@ -7,8 +7,10 @@ import (
 	"net/http"
 )
 
+// ContextKey тип для ключей контекста.
 type ContextKey string
 
+// UserIDKey ключ контекста для хранения идентификатора пользователя.
 const UserIDKey ContextKey = "user_id"
 
 // Auther - интерфейс для работы с пользователями и JWT-токенами.

@@ -8,6 +8,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 )
 
+// UserLinksDeleter интерфейс для удаления набора коротких ссылок пользователя.
 type UserLinksDeleter interface {
 	DeleteUserLinks(userID int, shortURLs []string) error
 }

@@ -4,9 +4,12 @@ package audit
 
 import "time"
 
+// Константы действий аудита.
 const (
+	// ShortenAction обозначает событие создания короткой ссылки.
 	ShortenAction = "shorten"
-	FollowAction  = "follow"
+	// FollowAction обозначает событие перехода по короткой ссылке.
+	FollowAction = "follow"
 )
 
 // AuditService управляет списком наблюдателей и рассылает им события.

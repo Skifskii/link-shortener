@@ -26,7 +26,8 @@ type Router struct {
 	chiRouter *chi.Mux
 }
 
-// Shorter интерфейс для сокращения ссылок.
+// Shorter интерфейс для сокращения ссылок, объединяющий методы, которые
+// используются различными хендлерами приложения.
 type Shorter interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 	Redirect(shortURL string) (longURL string, err error)
@@ -35,12 +36,12 @@ type Shorter interface {
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
-// pinger интерфейс для проверки доступности сервиса.
+// pinger интерфейс для проверки доступности сервиса (используется в /ping handler).
 type pinger interface {
 	Ping() error
 }
 
-// Auther интерфейс для работы с пользователями.
+// Auther интерфейс для работы с пользователями и JWT-токенами.
 type Auther interface {
 	CreateUser(username string) (jwt string, err error)
 	GetUserID(tokenString string) (int, error)

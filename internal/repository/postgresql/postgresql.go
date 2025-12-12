@@ -92,14 +92,15 @@ func (pr *PostgresqlRepo) completeDeleteTasks(tasks []deleteTask) {
 
 	stmt, err := tx.Prepare(
 		`UPDATE links
-		SET is_deleted = TRUE
-		WHERE id = (
-			SELECT l.id
-			FROM links AS l
-			JOIN users_links AS ul ON ul.link_id = l.id
-			WHERE l.short = $1 AND ul.user_id = $2
-			LIMIT 1
-		);`)
+			SET is_deleted = TRUE
+			WHERE id = (
+				SELECT l.id
+				FROM links AS l
+				JOIN users_links AS ul ON ul.link_id = l.id
+				WHERE l.short = $1 AND ul.user_id = $2
+				LIMIT 1
+			);
+	`)
 	if err != nil {
 		fmt.Printf("tx.Prepare error")
 		return

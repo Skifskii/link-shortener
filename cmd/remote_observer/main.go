@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// Payload представляет структуру ожидаемого JSON-объекта.
 type Payload struct {
 	Message string `json:"message"`
 	Value   int    `json:"value"`

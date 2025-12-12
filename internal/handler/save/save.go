@@ -11,11 +11,17 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
+// Shortener интерфейс описывает минимальную функциональность сервиса
+// сокращения ссылок, необходимую для HTTP-обработчика save.
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.53.5 --name=Shortener
 type Shortener interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
+// AuditEventNotifier интерфейс должен реализовывать возможность уведомления
+// о событии аудита (используется для отправки событий после успешной операции).
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.53.5 --name=AuditEventNotifier
 type AuditEventNotifier interface {
 	NotifyAll(*audit.Event)
