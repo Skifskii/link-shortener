@@ -3,7 +3,6 @@ package shortener
 import (
 	"crypto/rand"
 	"errors"
-	"math/big"
 	"strings"
 
 	"github.com/Skifskii/link-shortener/internal/model"
@@ -92,16 +91,43 @@ func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
 
 func (s *ShorterService) generateShortCode() (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, s.length)
-	for i := range b {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+	if s.length <= 0 {
+		return "", nil
+	}
+
+	letterBytes := []byte(letters)
+	l := byte(len(letterBytes)) // 62
+	// порог для rejection sampling: 256 - (256 % 62) = 248
+	const threshold = 256 - (256 % 62)
+
+	result := make([]byte, s.length)
+	// буфер немного больше, чтобы реже вызывать rand.Read
+	bufSize := s.length + s.length/2
+	if bufSize < 16 {
+		bufSize = 16
+	}
+	buf := make([]byte, bufSize)
+
+	i := 0
+	for i < s.length {
+		_, err := rand.Read(buf)
 		if err != nil {
 			return "", err
 		}
-		b[i] = letters[n.Int64()]
+		for _, b := range buf {
+			if int(b) >= threshold {
+				// отбрасываем, чтобы избежать биаса
+				continue
+			}
+			result[i] = letterBytes[b%l]
+			i++
+			if i == s.length {
+				break
+			}
+		}
 	}
 
-	return string(b), nil
+	return string(result), nil
 }
 
 func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
