@@ -23,7 +23,7 @@ func New() *AuditService {
 
 func (a *AuditService) NotifyAll(e *Event) {
 	for _, observer := range a.observers {
-		observer.Update(e)
+		go observer.Update(e)
 	}
 }
 

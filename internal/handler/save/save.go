@@ -10,10 +10,12 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.53.5 --name=Shortener
 type Shortener interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.53.5 --name=AuditEventNotifier
 type AuditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
@@ -50,6 +52,6 @@ func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 		w.Write([]byte(shortURL))
 
 		// После успешного запроса отправляем уведомление
-		go auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, longURL))
+		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, longURL))
 	}
 }

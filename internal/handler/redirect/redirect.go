@@ -41,6 +41,6 @@ func New(sr ShortRedirecter, auditEventNotifier AuditEventNotifier) http.Handler
 
 		// После успешного запроса отправляем уведомление
 		userID := r.Context().Value(authmw.UserIDKey).(int)
-		go auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.FollowAction, longURL))
+		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.FollowAction, longURL))
 	}
 }

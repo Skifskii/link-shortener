@@ -66,7 +66,7 @@ func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 
 		// После успешного запроса отправляем уведомление
 		if status >= 200 && status < 300 {
-			go auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, req.URL))
+			auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, req.URL))
 		}
 	}
 }
