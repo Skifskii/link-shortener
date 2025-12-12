@@ -1,3 +1,4 @@
+// Package router конфигурирует маршруты HTTP и связывает их с обработчиками.
 package router
 
 import (
@@ -20,10 +21,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// Router обёртка над chi-маршрутизатором.
 type Router struct {
 	chiRouter *chi.Mux
 }
 
+// Shorter интерфейс для сокращения ссылок.
 type Shorter interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 	Redirect(shortURL string) (longURL string, err error)
@@ -32,19 +35,23 @@ type Shorter interface {
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
+// pinger интерфейс для проверки доступности сервиса.
 type pinger interface {
 	Ping() error
 }
 
+// Auther интерфейс для работы с пользователями.
 type Auther interface {
 	CreateUser(username string) (jwt string, err error)
 	GetUserID(tokenString string) (int, error)
 }
 
+// auditEventNotifier интерфейс для уведомления о событиях аудита.
 type auditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
 
+// New создаёт новый Router, регистрирует middleware и обработчики.
 func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier) *Router {
 	r := chi.NewRouter()
 
@@ -73,6 +80,7 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 	return &Router{r}
 }
 
+// Run запускает HTTP сервер на указанном адресе.
 func (r *Router) Run(address string) error {
 	fmt.Printf("Starting server at %s\n", address)
 	return http.ListenAndServe(address, r.chiRouter)

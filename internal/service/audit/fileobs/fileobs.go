@@ -1,3 +1,4 @@
+// Package fileobs реализует наблюдатель аудита, который сохраняет события в файл.
 package fileobs
 
 import (
@@ -8,17 +9,20 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
+// FileObserver записывает события аудита в указанный файл.
 type FileObserver struct {
 	filePath string
 	mu       sync.Mutex
 }
 
+// New создаёт FileObserver для записи событий в файл filePath.
 func New(filePath string) *FileObserver {
 	return &FileObserver{
 		filePath: filePath,
 	}
 }
 
+// Update получает событие и сохраняет его в файл (в виде JSON-строки).
 func (f *FileObserver) Update(e *audit.Event) {
 	if e == nil {
 		return
@@ -26,6 +30,7 @@ func (f *FileObserver) Update(e *audit.Event) {
 	f.addEventToFile(*e)
 }
 
+// addEventToFile выполняет потокобезопасную запись события в файл.
 func (f *FileObserver) addEventToFile(e audit.Event) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

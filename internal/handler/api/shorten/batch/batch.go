@@ -1,3 +1,4 @@
+// Package batch реализует обработчик пакетного сокращения ссылок для /api/shorten/batch.
 package batch
 
 import (
@@ -12,6 +13,7 @@ type BatchShortener interface {
 	BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 }
 
+// New возвращает HTTP-хендлер для пакетного API сокращения ссылок.
 func New(bs BatchShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

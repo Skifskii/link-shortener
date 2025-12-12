@@ -1,3 +1,5 @@
+// Package authmw предоставляет middleware для извлечения/создания JWT-cookie и
+// добавления user_id в контекст запроса.
 package authmw
 
 import (
@@ -9,11 +11,15 @@ type ContextKey string
 
 const UserIDKey ContextKey = "user_id"
 
+// Auther - интерфейс для работы с пользователями и JWT-токенами.
 type Auther interface {
+	// CreateUser создает нового пользователя и возвращает его JWT-токен.
 	CreateUser(username string) (jwt string, err error)
+	// GetUserID извлекает идентификатор пользователя из JWT-токена.
 	GetUserID(tokenString string) (int, error)
 }
 
+// AuthMiddleware проверяет наличие cookie "jwt" и помещает user_id в контекст запроса.
 func AuthMiddleware(a Auther) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

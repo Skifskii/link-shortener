@@ -1,3 +1,4 @@
+// Package urls содержит обработчики пользовательских URL-ов: получение и удаление.
 package urls
 
 import (
@@ -11,6 +12,7 @@ type UserLinksDeleter interface {
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
+// NewDelete возвращает HTTP-хендлер для удаления набора коротких ссылок пользователя.
 func NewDelete(u UserLinksDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {

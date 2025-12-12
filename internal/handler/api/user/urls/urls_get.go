@@ -1,3 +1,4 @@
+// Package urls реализует API для получения и удаления URL-ов пользователя.
 package urls
 
 import (
@@ -12,6 +13,7 @@ type UserPairsGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }
 
+// New возвращает HTTP-хендлер для получения списка пар short->original пользователя.
 func New(u UserPairsGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

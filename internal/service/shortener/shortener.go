@@ -1,3 +1,5 @@
+// Package shortener реализует логику сокращения ссылок: генерацию кодов, создание
+// укороченных ссылок и работу с пакетными операциями.
 package shortener
 
 import (
@@ -8,6 +10,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
+// URLSaveGetter - интерфейс для сохранения и получения URL из репозитория.
 type URLSaveGetter interface {
 	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
@@ -16,16 +19,19 @@ type URLSaveGetter interface {
 	DeleteBatchOfLinks(userID int, shortURL []string) error
 }
 
+// ShorterService предоставляет методы для сокращения ссылок и работы с хранилищем.
 type ShorterService struct {
 	baseURL string
 	length  int
 	repo    URLSaveGetter
 }
 
+// New создаёт новый экземпляр сервиса сокращения ссылок.
 func New(baseURL string, length int, repo URLSaveGetter) *ShorterService {
 	return &ShorterService{baseURL: baseURL, length: length, repo: repo}
 }
 
+// Shorten создаёт короткую ссылку для переданного longURL и сохраняет её в репозитории.
 func (s *ShorterService) Shorten(userID int, longURL string) (shortURL string, err error) {
 	shortCode, err := s.generateShortCode()
 	if err != nil {
@@ -41,6 +47,7 @@ func (s *ShorterService) Shorten(userID int, longURL string) (shortURL string, e
 	return shortURL, nil
 }
 
+// BatchShorten обрабатывает массив запросов и создаёт массив ответов с короткими ссылками.
 func (s *ShorterService) BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error) {
 	respBatch = make([]model.ResponseArrayElement, 0, len(reqBatch))
 
@@ -70,6 +77,7 @@ func (s *ShorterService) BatchShorten(userID int, reqBatch []model.RequestArrayE
 	return respBatch, nil
 }
 
+// Redirect возвращает исходный URL по краткой части shortURL и добавляет схему, если нужно.
 func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
 	longURL, err = s.repo.Get(s.baseURL + "/" + shortURL)
 	if err != nil {
@@ -89,6 +97,7 @@ func (s *ShorterService) Redirect(shortURL string) (longURL string, err error) {
 	return longURL, err
 }
 
+// generateShortCode генерирует короткий код заданной длины.
 func (s *ShorterService) generateShortCode() (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	if s.length <= 0 {
@@ -130,10 +139,12 @@ func (s *ShorterService) generateShortCode() (string, error) {
 	return string(result), nil
 }
 
+// GetUserPairs возвращает пары short->original для заданного пользователя.
 func (s *ShorterService) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
 	return s.repo.GetUserPairs(userID)
 }
 
+// DeleteUserLinks помечает набор коротких ссылок пользователя как удалённые.
 func (s *ShorterService) DeleteUserLinks(userID int, shortURLs []string) error {
 	for i := 0; i < len(shortURLs); i++ {
 		shortURLs[i] = s.baseURL + "/" + shortURLs[i]

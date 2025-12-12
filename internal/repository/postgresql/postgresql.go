@@ -1,3 +1,5 @@
+// Package postgresql реализует репозиторий на основе PostgreSQL с поддержкой
+// миграций и фоновой обработки удаления ссылок.
 package postgresql
 
 import (
@@ -20,6 +22,7 @@ var errEmptyDSN = errors.New("DSN is empty")
 var errDifferentSliceSizes = errors.New("slices are of different sizes")
 var errEmptyBatch = errors.New("batch is empty")
 
+// PostgresqlRepo реализует хранение ссылок в PostgreSQL.
 type PostgresqlRepo struct {
 	db          *sql.DB
 	delTaskChan chan deleteTask
@@ -30,6 +33,7 @@ type deleteTask struct {
 	shortURL string
 }
 
+// NewPostgresqlRepo создаёт подключение к PostgreSQL, запускает миграции и фонового работника удаления.
 func NewPostgresqlRepo(dsn string, zl *zap.Logger) (*PostgresqlRepo, error) {
 	if dsn == "" {
 		return nil, errEmptyDSN
@@ -115,6 +119,7 @@ func (pr *PostgresqlRepo) completeDeleteTasks(tasks []deleteTask) {
 	}
 }
 
+// DeleteBatchOfLinks ставит задачи на удаление ссылок в очередь для фоновой обработки.
 func (pr *PostgresqlRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
 	go func() {
 		for _, shortURL := range shortURLs {
@@ -142,6 +147,8 @@ func runMigration(dsn string, zl *zap.Logger) error {
 	return nil
 }
 
+// Save сохраняет короткую ссылку и привязывает её к пользователю. Возвращает существующий
+// short если original уже был сохранён.
 func (pr *PostgresqlRepo) Save(userID int, short, original string) (savedShort string, err error) {
 	var linkID int
 
@@ -174,6 +181,7 @@ func (pr *PostgresqlRepo) Save(userID int, short, original string) (savedShort s
 	return "", nil
 }
 
+// SaveBatch сохраняет пакет ссылок в транзакции.
 func (pr *PostgresqlRepo) SaveBatch(userID int, shortURLs, longURLs []string) error {
 	if len(shortURLs) != len(longURLs) {
 		return errDifferentSliceSizes
@@ -227,6 +235,7 @@ func (pr *PostgresqlRepo) SaveBatch(userID int, shortURLs, longURLs []string) er
 	return tx.Commit()
 }
 
+// Get возвращает оригинальный URL по короткой ссылке, проверяя флаг удаления.
 func (pr *PostgresqlRepo) Get(short string) (original string, err error) {
 	row := pr.db.QueryRow(
 		"SELECT original, is_deleted FROM links WHERE short = $1 LIMIT 1",
@@ -246,14 +255,17 @@ func (pr *PostgresqlRepo) Get(short string) (original string, err error) {
 	return original, nil
 }
 
+// Ping проверяет доступность подключения к базе данных.
 func (pr *PostgresqlRepo) Ping() error {
 	return pr.db.Ping()
 }
 
+// Close закрывает соединение с базой данных.
 func (pr *PostgresqlRepo) Close() error {
 	return pr.db.Close()
 }
 
+// CreateUser создаёт нового пользователя в базе данных и возвращает его ID.
 func (pr *PostgresqlRepo) CreateUser(username string) (userID int, err error) {
 	err = pr.db.QueryRow(
 		`INSERT INTO users (username)
@@ -265,6 +277,7 @@ func (pr *PostgresqlRepo) CreateUser(username string) (userID int, err error) {
 	return userID, err
 }
 
+// GetUserPairs возвращает все пары short->original, которые принадлежат пользователю.
 func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
 	rows, err := pr.db.Query(
 		`SELECT l.short, l.original

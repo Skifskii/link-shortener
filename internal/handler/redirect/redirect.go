@@ -1,3 +1,4 @@
+// Package redirect реализует HTTP-обработчик перенаправления по короткой ссылке.
 package redirect
 
 import (
@@ -18,6 +19,7 @@ type AuditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
 
+// New возвращает HTTP-хендлер для редиректа с короткой ссылки на оригинальную.
 func New(sr ShortRedirecter, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")

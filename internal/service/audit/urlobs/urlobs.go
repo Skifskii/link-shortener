@@ -1,3 +1,4 @@
+// Package urlobs реализует наблюдатель аудита, который отправляет события на удалённый URL.
 package urlobs
 
 import (
@@ -9,11 +10,13 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
+// URLObserver отправляет JSON-представление события на указанный URL по HTTP.
 type URLObserver struct {
 	url    string
 	client *http.Client
 }
 
+// New создаёт новый URLObserver с таймаутом клиента 10 секунд.
 func New(url string) *URLObserver {
 	return &URLObserver{
 		client: &http.Client{
@@ -23,6 +26,7 @@ func New(url string) *URLObserver {
 	}
 }
 
+// Update отправляет событие на удалённый сервис (не блокирующая операция).
 func (u *URLObserver) Update(e *audit.Event) {
 	if e == nil {
 		return
@@ -30,6 +34,7 @@ func (u *URLObserver) Update(e *audit.Event) {
 	u.notifyRemoteService(*e)
 }
 
+// notifyRemoteService сериализует событие и выполняет POST-запрос к удалённому URL.
 func (u *URLObserver) notifyRemoteService(e audit.Event) error {
 	body, err := json.Marshal(e)
 

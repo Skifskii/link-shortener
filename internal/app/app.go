@@ -1,3 +1,5 @@
+// Package app собирает и запускает все компоненты приложения: конфигурацию,
+// логгер, репозиторий, сервисы и HTTP роутер.
 package app
 
 import (
@@ -17,6 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Run инициализирует все компоненты приложения и запускает HTTP-сервер.
 func Run() error {
 	// Конфиг
 	cfg := config.New()
@@ -78,6 +81,7 @@ type URLSaveGetter interface {
 	DeleteBatchOfLinks(userID int, shortURL []string) error
 }
 
+// chooseFallbackRepo выбирает запасное хранилище (файл или память) и возвращает его.
 func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {
 	var repo URLSaveGetter
 	var err error

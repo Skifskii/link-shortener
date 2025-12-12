@@ -1,3 +1,4 @@
+// Package gzipmw реализует middleware для сжатия/распаковки тела HTTP-запроса/ответа в формате gzip.
 package gzipmw
 
 import (
@@ -69,6 +70,7 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
+// GzipMiddleware выполняет компрессию ответа и декомпрессию входящего тела, если клиент поддерживает gzip.
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

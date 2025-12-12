@@ -1,3 +1,4 @@
+// Package save реализует обработчик HTTP-запроса для сокращения одиночной ссылки.
 package save
 
 import (
@@ -20,6 +21,8 @@ type AuditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
 
+// New возвращает HTTP-хендлер для сокращения ссылки. После успешного создания
+// отправляет событие в AuditEventNotifier.
 func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)

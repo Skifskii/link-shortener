@@ -1,3 +1,5 @@
+// Package logger предоставляет вспомогательные функции для инициализации логгера
+// и middleware для логирования HTTP-запросов.
 package logger
 
 import (
@@ -7,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Init инициализирует логгер zap с заданным уровнем логирования.
 func Init(level string) (*zap.Logger, error) {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -45,6 +48,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
+// RequestLogger возвращает middleware, логирующий HTTP-запросы и ответы.
 func RequestLogger(log *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
