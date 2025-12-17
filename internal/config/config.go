@@ -34,8 +34,8 @@ func New() *Config {
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
 	flag.StringVar(&cfg.SecretKey, "s", "", "secret key")
-	flag.StringVar(&cfg.AuditFile, "audit-file", "", "secret key")
-	flag.StringVar(&cfg.AuditURL, "audit-url", "", "secret key")
+	flag.StringVar(&cfg.AuditFile, "audit-file", "", "file for audit events")
+	flag.StringVar(&cfg.AuditURL, "audit-url", "", "address for audit events")
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)
