@@ -45,7 +45,11 @@ func New(sr ShortRedirecter, auditEventNotifier AuditEventNotifier) http.Handler
 		w.WriteHeader(http.StatusTemporaryRedirect)
 
 		// После успешного запроса отправляем уведомление
-		userID := r.Context().Value(authmw.UserIDKey).(int)
+		userID, ok := r.Context().Value(authmw.UserIDKey).(int)
+		if !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.FollowAction, longURL))
 	}
 }
