@@ -1,3 +1,5 @@
+// Package config содержит логику чтения конфигурации из флагов командной строки
+// и переменных окружения.
 package config
 
 import (
@@ -9,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config содержит параметры конфигурации приложения.
 type Config struct {
 	Address         string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
@@ -16,8 +19,11 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	SecretKey       string `env:"SECRET_KEY"`
+	AuditFile       string `env:"AUDIT_FILE"`
+	AuditURL        string `env:"AUDIT_URL"`
 }
 
+// New читает конфигурацию из флагов и переменных окружения и возвращает объект Config.
 func New() *Config {
 	cfg := &Config{}
 
@@ -28,6 +34,8 @@ func New() *Config {
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
 	flag.StringVar(&cfg.SecretKey, "s", "", "secret key")
+	flag.StringVar(&cfg.AuditFile, "audit-file", "", "file for audit events")
+	flag.StringVar(&cfg.AuditURL, "audit-url", "", "address for audit events")
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)

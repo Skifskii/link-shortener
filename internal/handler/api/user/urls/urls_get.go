@@ -1,3 +1,4 @@
+// Package urls реализует API для получения и удаления URL-ов пользователя.
 package urls
 
 import (
@@ -8,11 +9,13 @@ import (
 	"github.com/Skifskii/link-shortener/internal/model"
 )
 
-type Shortener interface {
+// UserPairsGetter интерфейс для получения списка пар short->original пользователя.
+type UserPairsGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 }
 
-func New(s Shortener) http.HandlerFunc {
+// New возвращает HTTP-хендлер для получения списка пар short->original пользователя.
+func New(u UserPairsGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -25,7 +28,7 @@ func New(s Shortener) http.HandlerFunc {
 			return
 		}
 
-		pairs, err := s.GetUserPairs(userID)
+		pairs, err := u.GetUserPairs(userID)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return

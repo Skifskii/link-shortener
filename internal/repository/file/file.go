@@ -1,3 +1,5 @@
+// Package file реализует файловое хранилище ссылок, где каждая запись хранится
+// в виде JSON-строки в текстовом файле.
 package file
 
 import (
@@ -14,12 +16,14 @@ import (
 
 var errEmptyFilepath = errors.New("filepath is empty")
 
+// LinkRecord описывает запись в файловом хранилище.
 type LinkRecord struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
 
+// FileRepo предоставляет методы чтения/записи записей ссылок в файл.
 type FileRepo struct {
 	*fileWriter
 	*fileReader
@@ -145,6 +149,7 @@ func (fr *fileReader) countRecords() (int, error) {
 	return count, nil
 }
 
+// NewFileRepo создаёт новый репозиторий на основе файлового пути.
 func NewFileRepo(filepath string) (*FileRepo, error) {
 	if filepath == "" {
 		return nil, errEmptyFilepath
@@ -166,6 +171,7 @@ func NewFileRepo(filepath string) (*FileRepo, error) {
 	return &fileRepo, nil
 }
 
+// Save сохраняет запись в файл. Если original уже присутствует, возвращает существующий short и ошибку repository.ErrOriginalURLAlreadyExists.
 func (fr *FileRepo) Save(_ int, short, original string) (existingShort string, err error) {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
@@ -191,7 +197,8 @@ func (fr *FileRepo) Save(_ int, short, original string) (existingShort string, e
 	})
 }
 
-func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
+// SaveBatch сохраняет пакет ссылок в файл.
+func (fr *FileRepo) SaveBatch(userID int, shortURLs, longURLs []string) error {
 	for i, short := range shortURLs {
 		if _, err := fr.Save(0, short, longURLs[i]); err != nil { // TODO:
 			return err
@@ -200,6 +207,7 @@ func (fr *FileRepo) SaveBatch(shortURLs, longURLs []string) error {
 	return nil
 }
 
+// Get возвращает оригинальный URL по короткой ссылке из файла.
 func (fr *FileRepo) Get(short string) (string, error) {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
@@ -212,14 +220,17 @@ func (fr *FileRepo) Get(short string) (string, error) {
 	return lr.OriginalURL, nil
 }
 
+// GetUserPairs возвращает пары short->original для пользователя (не реализовано).
 func (fr *FileRepo) GetUserPairs(userID int) ([]model.ResponsePairElement, error) {
 	return []model.ResponsePairElement{}, nil
 }
 
+// CreateUser создаёт пользователя (не реализовано для файлового репозитория).
 func (fr *FileRepo) CreateUser(username string) (userID int, err error) {
 	return -1, nil
 }
 
+// DeleteBatchOfLinks помечает ссылки как удалённые (не реализовано для файлового репозитория).
 func (fr *FileRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
 	return nil // TODO:
 }

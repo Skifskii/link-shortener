@@ -24,3 +24,5 @@ vendor/
 
 cmd/playground
 .env
+audit.json
+storage.json

@@ -1,3 +1,4 @@
+// Package gzipmw реализует middleware для сжатия/распаковки тела HTTP-запроса/ответа в формате gzip.
 package gzipmw
 
 import (
@@ -19,14 +20,17 @@ func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	}
 }
 
+// Header возвращает заголовки HTTP-ответа.
 func (c *compressWriter) Header() http.Header {
 	return c.w.Header()
 }
 
+// Write записывает сжатые данные в ответ.
 func (c *compressWriter) Write(p []byte) (int, error) {
 	return c.zw.Write(p)
 }
 
+// WriteHeader записывает заголовок ответа с указанным статусом кода.
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")
@@ -58,10 +62,12 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 	}, nil
 }
 
+// Read читает декомпрессированные данные из тела запроса.
 func (c compressReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
+// Close закрывает gzip.Reader и исходное тело запроса.
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err
@@ -69,6 +75,7 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
+// GzipMiddleware выполняет компрессию ответа и декомпрессию входящего тела, если клиент поддерживает gzip.
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

@@ -1,3 +1,5 @@
+// Package app собирает и запускает все компоненты приложения: конфигурацию,
+// логгер, репозиторий, сервисы и HTTP роутер.
 package app
 
 import (
@@ -8,12 +10,16 @@ import (
 	"github.com/Skifskii/link-shortener/internal/repository/inmemory"
 	"github.com/Skifskii/link-shortener/internal/repository/postgresql"
 	"github.com/Skifskii/link-shortener/internal/router"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
+	"github.com/Skifskii/link-shortener/internal/service/audit/fileobs"
+	"github.com/Skifskii/link-shortener/internal/service/audit/urlobs"
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
 	"go.uber.org/zap"
 )
 
+// Run инициализирует все компоненты приложения и запускает HTTP-сервер.
 func Run() error {
 	// Конфиг
 	cfg := config.New()
@@ -52,20 +58,32 @@ func Run() error {
 	// Сервис аутентификации
 	authServiece := auth.New(repo, cfg.SecretKey)
 
+	// Сервис аудита запросов
+	auditService := audit.New()
+	if cfg.AuditFile != "" {
+		auditService.Register(fileobs.New(cfg.AuditFile))
+	}
+	if cfg.AuditURL != "" {
+		auditService.Register(urlobs.New(cfg.AuditURL))
+	}
+
 	// HTTP сервер
-	r := router.New(zl, s, dBPingService, authServiece)
+	r := router.New(zl, s, dBPingService, authServiece, auditService)
 	return r.Run(cfg.Address)
 }
 
+// URLSaveGetter определяет набор методов, которые приложение ожидает от
+// репозитория для сохранения и получения URL-ов (используется и в app, и в сервисе сокращения).
 type URLSaveGetter interface {
 	Save(userID int, shortURL, longURL string) (existingShort string, err error)
 	Get(shortURL string) (string, error)
-	SaveBatch(shortURLs, longURLs []string) error
+	SaveBatch(userID int, shortURLs, longURLs []string) error
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	CreateUser(username string) (userID int, err error)
 	DeleteBatchOfLinks(userID int, shortURL []string) error
 }
 
+// chooseFallbackRepo выбирает запасное хранилище (файл или память) и возвращает его.
 func chooseFallbackRepo(cfg *config.Config, zl *zap.Logger) (URLSaveGetter, error) {
 	var repo URLSaveGetter
 	var err error

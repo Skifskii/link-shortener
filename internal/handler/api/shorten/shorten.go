@@ -1,3 +1,4 @@
+// Package shorten содержит HTTP-обработчик для API сокращения ссылок (JSON).
 package shorten
 
 import (
@@ -8,13 +9,21 @@ import (
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/model"
 	"github.com/Skifskii/link-shortener/internal/repository"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 )
 
+// Shortener интерфейс для сервиса сокращения ссылок.
 type Shortener interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
-func New(s Shortener) http.HandlerFunc {
+// AuditEventNotifier интерфейс для уведомления о событиях аудита.
+type AuditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+// New возвращает HTTP-хендлер для endpoint /api/shorten.
+func New(s Shortener, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -58,5 +67,10 @@ func New(s Shortener) http.HandlerFunc {
 
 		enc := json.NewEncoder(w)
 		enc.Encode(resp)
+
+		// После успешного запроса отправляем уведомление
+		if status >= 200 && status < 300 {
+			auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.ShortenAction, req.URL))
+		}
 	}
 }

@@ -1,18 +1,29 @@
+// Package redirect реализует HTTP-обработчик перенаправления по короткой ссылке.
 package redirect
 
 import (
 	"errors"
 	"net/http"
 
+	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/repository"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/go-chi/chi/v5"
 )
 
+// ShortRedirecter интерфейс предоставляет метод для получения оригинального URL
+// по короткой части ссылки (без baseURL).
 type ShortRedirecter interface {
 	Redirect(shortURL string) (longURL string, err error)
 }
 
-func New(sr ShortRedirecter) http.HandlerFunc {
+// AuditEventNotifier интерфейс для отправки событий аудита.
+type AuditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+// New возвращает HTTP-хендлер для редиректа с короткой ссылки на оригинальную.
+func New(sr ShortRedirecter, auditEventNotifier AuditEventNotifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := chi.URLParam(r, "id")
 		if shortURL == "" {
@@ -32,5 +43,13 @@ func New(sr ShortRedirecter) http.HandlerFunc {
 
 		w.Header().Set("Location", longURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+
+		// После успешного запроса отправляем уведомление
+		userID, ok := r.Context().Value(authmw.UserIDKey).(int)
+		if !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		auditEventNotifier.NotifyAll(audit.NewEvent(userID, audit.FollowAction, longURL))
 	}
 }

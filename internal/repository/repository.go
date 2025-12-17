@@ -2,12 +2,16 @@ package repository
 
 import "errors"
 
+// Repository описывает минимальный набор операций, поддерживаемых репозиторием.
 type Repository interface {
 	Save(short, original string) (existingShort string, err error)
 	Get(short string) (string, error)
 }
 
-var ErrOriginalURLAlreadyExists = errors.New("received link already exists and has a short version")
-var ErrShortNotFound = errors.New("short URL not found")
-var ErrOriginalNotFound = errors.New("original URL not found")
-var ErrLinkDeleted = errors.New("link has been deleted")
+// Стандартные ошибки репозитория, используемые в разных реализациях.
+var (
+	ErrOriginalURLAlreadyExists = errors.New("received link already exists and has a short version")
+	ErrShortNotFound            = errors.New("short URL not found")
+	ErrOriginalNotFound         = errors.New("original URL not found")
+	ErrLinkDeleted              = errors.New("link has been deleted")
+)

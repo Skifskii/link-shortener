@@ -1,63 +1,87 @@
+// Package router конфигурирует маршруты HTTP и связывает их с обработчиками.
 package router
 
 import (
 	"fmt"
 	"net/http"
 
-	"github.com/Skifskii/link-shortener/internal/handler/batch"
-	"github.com/Skifskii/link-shortener/internal/handler/delete"
+	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
+	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
+	"github.com/Skifskii/link-shortener/internal/handler/api/user/urls"
 	"github.com/Skifskii/link-shortener/internal/handler/ping"
 	"github.com/Skifskii/link-shortener/internal/handler/redirect"
 	"github.com/Skifskii/link-shortener/internal/handler/save"
-	"github.com/Skifskii/link-shortener/internal/handler/shorten"
-	"github.com/Skifskii/link-shortener/internal/handler/urls"
+
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/middleware/gzipmw"
 	"github.com/Skifskii/link-shortener/internal/model"
+	"github.com/Skifskii/link-shortener/internal/service/audit"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
+// Router обёртка над chi-маршрутизатором.
 type Router struct {
 	chiRouter *chi.Mux
 }
 
+// Shorter интерфейс для сокращения ссылок, объединяющий методы, которые
+// используются различными хендлерами приложения.
 type Shorter interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 	Redirect(shortURL string) (longURL string, err error)
-	BatchShorten(reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
+	BatchShorten(userID int, reqBatch []model.RequestArrayElement) (respBatch []model.ResponseArrayElement, err error)
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	DeleteUserLinks(userID int, shortURLs []string) error
 }
 
+// pinger интерфейс для проверки доступности сервиса (используется в /ping handler).
 type pinger interface {
 	Ping() error
 }
 
+// Auther интерфейс для работы с пользователями и JWT-токенами.
 type Auther interface {
 	CreateUser(username string) (jwt string, err error)
 	GetUserID(tokenString string) (int, error)
 }
 
-func New(zl *zap.Logger, shorter Shorter, p pinger, a Auther) *Router {
+// auditEventNotifier интерфейс для уведомления о событиях аудита.
+type auditEventNotifier interface {
+	NotifyAll(*audit.Event)
+}
+
+// New создаёт новый Router, регистрирует middleware и обработчики.
+func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier) *Router {
 	r := chi.NewRouter()
 
+	// middlewares
 	r.Use(logger.RequestLogger(zl))
-	r.Use(authmw.AuthMiddleware(a))
+	r.Use(authmw.AuthMiddleware(auth))
 	r.Use(gzipmw.GzipMiddleware)
 
-	r.Get("/{id}", redirect.New(shorter))
-	r.Post("/", save.New(shorter))
-	r.Post("/api/shorten", shorten.New(shorter))
+	// handlers
+	r.Route("/", func(r chi.Router) {
+		r.Post("/", save.New(shorter, aud))
+		r.Get("/{id}", redirect.New(shorter, aud))
+	})
+	r.Route("/api", func(r chi.Router) {
+		r.Route("/shorten", func(r chi.Router) {
+			r.Post("/", shorten.New(shorter, aud))
+			r.Post("/batch", batch.New(shorter))
+		})
+		r.Route("/user", func(r chi.Router) {
+			r.Get("/urls", urls.New(shorter))
+			r.Delete("/urls", urls.NewDelete(shorter))
+		})
+	})
 	r.Get("/ping", ping.New(p))
-	r.Post("/api/shorten/batch", batch.New(shorter))
-	r.Get("/api/user/urls", urls.New(shorter))
-	r.Delete("/api/user/urls", delete.New(shorter))
 
 	return &Router{r}
 }
 
+// Run запускает HTTP сервер на указанном адресе.
 func (r *Router) Run(address string) error {
 	fmt.Printf("Starting server at %s\n", address)
 	return http.ListenAndServe(address, r.chiRouter)
