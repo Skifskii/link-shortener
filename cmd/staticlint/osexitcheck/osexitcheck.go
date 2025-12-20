@@ -1,3 +1,6 @@
+// Package osexitcheck проверяет наличие прямых вызовов os.Exit в функции main пакета main.
+// Анализатор сообщает о прямых вызовах os.Exit в main и помогает избежать непредсказуемого завершения процесса.
+// Рекомендуется возвращать ошибки из main и централизовать вызов os.Exit.
 package osexitcheck
 
 import (
@@ -7,6 +10,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Analyzer - это анализатор, который проверяет наличие прямых вызовов os.Exit в функции main пакета main.
 var Analyzer = &analysis.Analyzer{
 	Name: "osexitcheck",
 	Doc:  "reports direct calls to os.Exit in the main function of package main",
