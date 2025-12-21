@@ -44,6 +44,8 @@ func (a *AuditService) Register(o observer) {
 
 // Event описывает событие аудита.
 // Поле Timestamp содержит unix-время события, Action указывает тип действия.
+//
+// generate:reset
 type Event struct {
 	Timestamp   int64  `json:"ts"`             // unix timestamp события
 	Action      string `json:"action"`         // действие: shorten (создание) или follow (прохождение по ссылке)
