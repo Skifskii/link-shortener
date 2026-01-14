@@ -21,11 +21,17 @@ type Config struct {
 	SecretKey       string `env:"SECRET_KEY"`
 	AuditFile       string `env:"AUDIT_FILE"`
 	AuditURL        string `env:"AUDIT_URL"`
+	EnableHTTPS     bool   `env:"ENABLE_HTTPS"`
+	TLSCertPath     string
+	TLSKeyPath      string
 }
 
 // New читает конфигурацию из флагов и переменных окружения и возвращает объект Config.
 func New() *Config {
-	cfg := &Config{}
+	cfg := &Config{
+		TLSCertPath: "cert/cert.pem",
+		TLSKeyPath:  "cert/private.pem",
+	}
 
 	// Парсим флаги командной строки
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
@@ -33,9 +39,11 @@ func New() *Config {
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level (debug, info, warn, error)")
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
-	flag.StringVar(&cfg.SecretKey, "s", "", "secret key")
+	flag.StringVar(&cfg.SecretKey, "k", "", "secret key")
 	flag.StringVar(&cfg.AuditFile, "audit-file", "", "file for audit events")
 	flag.StringVar(&cfg.AuditURL, "audit-url", "", "address for audit events")
+	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "enable HTTPS")
+
 	flag.Parse()
 
 	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)
