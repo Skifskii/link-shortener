@@ -69,7 +69,7 @@ func Run() error {
 
 	// HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece, auditService)
-	return r.Run(cfg.Address)
+	return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
 }
 
 // URLSaveGetter определяет набор методов, которые приложение ожидает от
