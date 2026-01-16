@@ -2,8 +2,12 @@
 package router
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
@@ -83,25 +87,52 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 
 // Run запускает HTTP сервер на указанном адресе.
 func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error {
-	if enableHTTPS {
-		return r.RunTLS(address, certPath, keyPath)
-	}
-
-	fmt.Printf("Starting server at %s\n", address)
-	return http.ListenAndServe(address, r.chiRouter)
-}
-
-// RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
-func (r *Router) RunTLS(address, certPath, keyPath string) error {
-	fmt.Printf("Starting server (https) at %s\n", address)
-
-	if certPath == "" || keyPath == "" {
-		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
-	}
-
 	server := &http.Server{
 		Addr:    address,
 		Handler: r.chiRouter,
+	}
+
+	// через этот канал сообщим основному потоку, что соединения закрыты
+	connsClosed := make(chan struct{})
+
+	// канал для перенаправления прерываний
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	// запускаем горутину обработки пойманных прерываний
+	go func() {
+		<-sigint
+		fmt.Println("Shutting down server...")
+		if err := server.Shutdown(context.Background()); err != nil {
+			fmt.Printf("HTTP server Shutdown: %v\n", err)
+		}
+
+		close(connsClosed)
+	}()
+
+	// Запускаем сервер
+	fmt.Printf("Starting server at %s\n", address)
+	var err error
+	if enableHTTPS {
+		err = r.RunTLS(server, certPath, keyPath)
+	} else {
+		err = server.ListenAndServe()
+	}
+	if err != http.ErrServerClosed {
+		return fmt.Errorf("HTTP server ListenAndServe: %w", err)
+	}
+
+	// Ждём закрытия всех соединений
+	<-connsClosed
+	fmt.Println("Server Shutdown gracefully")
+
+	return nil
+}
+
+// RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
+func (r *Router) RunTLS(server *http.Server, certPath, keyPath string) error {
+	if certPath == "" || keyPath == "" {
+		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
 	}
 
 	return server.ListenAndServeTLS(certPath, keyPath)
