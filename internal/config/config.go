@@ -3,9 +3,11 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
@@ -13,15 +15,15 @@ import (
 
 // Config содержит параметры конфигурации приложения.
 type Config struct {
-	Address         string `env:"SERVER_ADDRESS"`
-	BaseURL         string `env:"BASE_URL"`
-	LogLevel        string `env:"LOG_LEVEL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
-	SecretKey       string `env:"SECRET_KEY"`
-	AuditFile       string `env:"AUDIT_FILE"`
-	AuditURL        string `env:"AUDIT_URL"`
-	EnableHTTPS     bool   `env:"ENABLE_HTTPS"`
+	Address         string `json:"server_address" env:"SERVER_ADDRESS"`
+	BaseURL         string `json:"base_url" env:"BASE_URL"`
+	LogLevel        string `json:"log_level" env:"LOG_LEVEL"`
+	FileStoragePath string `json:"file_storage_path" env:"FILE_STORAGE_PATH"`
+	DatabaseDSN     string `json:"database_dsn" env:"DATABASE_DSN"`
+	SecretKey       string `json:"secret_key" env:"SECRET_KEY"`
+	AuditFile       string `json:"audit_file" env:"AUDIT_FILE"`
+	AuditURL        string `json:"audit_url" env:"AUDIT_URL"`
+	EnableHTTPS     bool   `json:"enable_https" env:"ENABLE_HTTPS"`
 	TLSCertPath     string
 	TLSKeyPath      string
 }
@@ -33,7 +35,52 @@ func New() *Config {
 		TLSKeyPath:  "cert/private.pem",
 	}
 
-	// Парсим флаги командной строки
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Warning: .env file not found, proceeding without it")
+	}
+
+	// 1. JSON файл (низший приоритет)
+	configFilePath := findConfigPath()
+	if configFilePath != "" {
+		if err := loadFromJSON(cfg, configFilePath); err != nil {
+			log.Fatalf("Error loading config from JSON file: %v", err)
+		}
+	}
+
+	// 2. Флаги командной строки
+	loadFromFlags(cfg)
+
+	// 3. Переменные окружения (высший приоритет)
+	if err := loadFromEnv(cfg); err != nil {
+		log.Fatalf("Error loading config from environment variables: %v", err)
+	}
+
+	return cfg
+}
+
+func findConfigPath() string {
+	if v, ok := os.LookupEnv("CONFIG"); ok {
+		return v
+	}
+
+	var path string
+	flag.StringVar(&path, "c", "", "config file path")
+	flag.Parse()
+
+	return path
+}
+
+func loadFromJSON(cfg *Config, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(cfg)
+}
+
+func loadFromFlags(cfg *Config) {
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "base url")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level (debug, info, warn, error)")
@@ -45,15 +92,13 @@ func New() *Config {
 	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "enable HTTPS")
 
 	flag.Parse()
+}
 
-	// Парсим переменные окружения (перезаписываем значения из флагов, если переменные заданы)
-	if err := godotenv.Load(); err != nil {
-		fmt.Println("Warning: .env file not found, proceeding without it")
-	}
+func loadFromEnv(cfg *Config) error {
 	err := env.Parse(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return cfg
+	return nil
 }
