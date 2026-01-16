@@ -82,7 +82,27 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 }
 
 // Run запускает HTTP сервер на указанном адресе.
-func (r *Router) Run(address string) error {
+func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error {
+	if enableHTTPS {
+		return r.RunTLS(address, certPath, keyPath)
+	}
+
 	fmt.Printf("Starting server at %s\n", address)
 	return http.ListenAndServe(address, r.chiRouter)
+}
+
+// RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
+func (r *Router) RunTLS(address, certPath, keyPath string) error {
+	fmt.Printf("Starting server (https) at %s\n", address)
+
+	if certPath == "" || keyPath == "" {
+		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
+	}
+
+	server := &http.Server{
+		Addr:    address,
+		Handler: r.chiRouter,
+	}
+
+	return server.ListenAndServeTLS(certPath, keyPath)
 }
