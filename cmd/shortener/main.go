@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Skifskii/link-shortener/internal/app"
 )
@@ -16,7 +17,7 @@ func main() {
 	fmt.Println("Build commit:", stringIfNotEmpty(buildCommit))
 
 	if err := app.Run(); err != nil {
-		panic(err)
+		log.Fatalf("Application error: %v", err)
 	}
 }
 

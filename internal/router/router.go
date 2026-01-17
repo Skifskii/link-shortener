@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
@@ -103,7 +104,11 @@ func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error 
 	go func() {
 		<-sigint
 		fmt.Println("Shutting down server...")
-		if err := server.Shutdown(context.Background()); err != nil {
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
 			fmt.Printf("HTTP server Shutdown: %v\n", err)
 		}
 
