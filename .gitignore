@@ -26,3 +26,4 @@ cmd/playground
 .env
 audit.json
 storage.json
+config.json
