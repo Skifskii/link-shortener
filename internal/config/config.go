@@ -29,28 +29,33 @@ type Config struct {
 }
 
 // New читает конфигурацию из флагов и переменных окружения и возвращает объект Config.
+// Приоритет источников: json < флаги < переменные окружения.
 func New() *Config {
 	cfg := &Config{
 		TLSCertPath: "cert/cert.pem",
 		TLSKeyPath:  "cert/private.pem",
 	}
 
+	// Загрузка переменных окружения из .env файла, если он существует
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("Warning: .env file not found, proceeding without it")
 	}
 
-	// 1. JSON файл (низший приоритет)
-	configFilePath := findConfigPath()
+	// Получаем флаги командной строки во временное хранилище, чтобы получить путь до JSON конфига
+	fv := parseFlags(cfg)
+
+	// Парсим JSON файл
+	configFilePath := findConfigPath(fv.configJSONPath)
 	if configFilePath != "" {
 		if err := loadFromJSON(cfg, configFilePath); err != nil {
 			log.Fatalf("Error loading config from JSON file: %v", err)
 		}
 	}
 
-	// 2. Флаги командной строки
-	loadFromFlags(cfg)
+	// Применяем флаги командной строки
+	applyFlags(cfg, fv)
 
-	// 3. Переменные окружения (высший приоритет)
+	// Парсим переменные окружения (высший приоритет)
 	if err := loadFromEnv(cfg); err != nil {
 		log.Fatalf("Error loading config from environment variables: %v", err)
 	}
@@ -58,16 +63,11 @@ func New() *Config {
 	return cfg
 }
 
-func findConfigPath() string {
+func findConfigPath(flagConfigPath string) string {
 	if v, ok := os.LookupEnv("CONFIG"); ok {
 		return v
 	}
-
-	var path string
-	flag.StringVar(&path, "c", "", "config file path")
-	flag.Parse()
-
-	return path
+	return flagConfigPath
 }
 
 func loadFromJSON(cfg *Config, path string) error {
@@ -80,18 +80,61 @@ func loadFromJSON(cfg *Config, path string) error {
 	return json.NewDecoder(file).Decode(cfg)
 }
 
-func loadFromFlags(cfg *Config) {
-	flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "base url")
-	flag.StringVar(&cfg.LogLevel, "l", "info", "log level (debug, info, warn, error)")
-	flag.StringVar(&cfg.FileStoragePath, "f", "", "file for saving links")
-	flag.StringVar(&cfg.DatabaseDSN, "d", "", "database connection string")
-	flag.StringVar(&cfg.SecretKey, "k", "", "secret key")
-	flag.StringVar(&cfg.AuditFile, "audit-file", "", "file for audit events")
-	flag.StringVar(&cfg.AuditURL, "audit-url", "", "address for audit events")
-	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "enable HTTPS")
+type flagValues struct {
+	address         string
+	baseURL         string
+	logLevel        string
+	fileStoragePath string
+	databaseDSN     string
+	secretKey       string
+	auditFile       string
+	auditURL        string
+	configJSONPath  string
+	enableHTTPS     bool
+}
+
+func parseFlags(cfg *Config) *flagValues {
+	fv := &flagValues{}
+
+	flag.StringVar(&fv.address, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&fv.baseURL, "b", "http://localhost:8080", "base url")
+	flag.StringVar(&fv.logLevel, "l", "info", "log level (debug, info, warn, error)")
+	flag.StringVar(&fv.fileStoragePath, "f", "", "file for saving links")
+	flag.StringVar(&fv.databaseDSN, "d", "", "database connection string")
+	flag.StringVar(&fv.secretKey, "k", "", "secret key")
+	flag.StringVar(&fv.auditFile, "audit-file", "", "file for audit events")
+	flag.StringVar(&fv.auditURL, "audit-url", "", "address for audit events")
+	flag.StringVar(&fv.configJSONPath, "c", "", "config file path")
+	flag.BoolVar(&fv.enableHTTPS, "s", false, "enable HTTPS")
 
 	flag.Parse()
+
+	return fv
+}
+
+func applyFlags(cfg *Config, fv *flagValues) {
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "a":
+			cfg.Address = fv.address
+		case "b":
+			cfg.BaseURL = fv.baseURL
+		case "l":
+			cfg.LogLevel = fv.logLevel
+		case "f":
+			cfg.FileStoragePath = fv.fileStoragePath
+		case "d":
+			cfg.DatabaseDSN = fv.databaseDSN
+		case "k":
+			cfg.SecretKey = fv.secretKey
+		case "audit-file":
+			cfg.AuditFile = fv.auditFile
+		case "audit-url":
+			cfg.AuditURL = fv.auditURL
+		case "s":
+			cfg.EnableHTTPS = fv.enableHTTPS
+		}
+	})
 }
 
 func loadFromEnv(cfg *Config) error {
