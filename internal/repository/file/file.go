@@ -234,3 +234,11 @@ func (fr *FileRepo) CreateUser(username string) (userID int, err error) {
 func (fr *FileRepo) DeleteBatchOfLinks(userID int, shortURLs []string) error {
 	return nil // TODO:
 }
+
+func (fr *FileRepo) GetUsersCount() (int, error) {
+	return 0, nil // TODO:
+}
+
+func (fr *FileRepo) GetURLsCount() (int, error) {
+	return 0, nil // TODO:
+}

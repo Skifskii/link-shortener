@@ -4,12 +4,14 @@ package router
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/Skifskii/link-shortener/internal/handler/api/inter/stats"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
 	"github.com/Skifskii/link-shortener/internal/handler/api/user/urls"
@@ -57,8 +59,13 @@ type auditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
 
+// statsGetter - интерфейс для получения статистики.
+type statsGetter interface {
+	GetIfAllowed(ip net.IP) (model.StatsResponse, error)
+}
+
 // New создаёт новый Router, регистрирует middleware и обработчики.
-func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier) *Router {
+func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier, stat statsGetter) *Router {
 	r := chi.NewRouter()
 
 	// middlewares
@@ -79,6 +86,9 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 		r.Route("/user", func(r chi.Router) {
 			r.Get("/urls", urls.New(shorter))
 			r.Delete("/urls", urls.NewDelete(shorter))
+		})
+		r.Route("/internal", func(r chi.Router) {
+			r.Get("/stats", stats.New(stat))
 		})
 	})
 	r.Get("/ping", ping.New(p))
@@ -135,7 +145,7 @@ func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error 
 }
 
 // RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
-func (r *Router) RunTLS(server *http.Server, certPath, keyPath string) error {
+func (_ *Router) RunTLS(server *http.Server, certPath, keyPath string) error {
 	if certPath == "" || keyPath == "" {
 		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
 	}

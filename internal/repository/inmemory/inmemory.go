@@ -129,3 +129,15 @@ func (r *InMemoryRepo) deleteLinkByShort(userID int, shortURL string) error {
 
 	return nil
 }
+
+func (r *InMemoryRepo) GetUsersCount() (int, error) {
+	return len(r.users), nil
+}
+
+func (r *InMemoryRepo) GetURLsCount() (int, error) {
+	count := 0
+	for _, u := range r.users {
+		count += len(u.store)
+	}
+	return count, nil
+}

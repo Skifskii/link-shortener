@@ -23,6 +23,7 @@ type Config struct {
 	SecretKey       string `json:"secret_key" env:"SECRET_KEY"`
 	AuditFile       string `json:"audit_file" env:"AUDIT_FILE"`
 	AuditURL        string `json:"audit_url" env:"AUDIT_URL"`
+	TrustedSubnet   string `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
 	EnableHTTPS     bool   `json:"enable_https" env:"ENABLE_HTTPS"`
 	TLSCertPath     string
 	TLSKeyPath      string
@@ -42,7 +43,7 @@ func New() *Config {
 	}
 
 	// Получаем флаги командной строки во временное хранилище, чтобы получить путь до JSON конфига
-	fv := parseFlags(cfg)
+	fv := parseFlags()
 
 	// Парсим JSON файл
 	configFilePath := findConfigPath(fv.configJSONPath)
@@ -90,10 +91,11 @@ type flagValues struct {
 	auditFile       string
 	auditURL        string
 	configJSONPath  string
+	trustedSubnet   string
 	enableHTTPS     bool
 }
 
-func parseFlags(cfg *Config) *flagValues {
+func parseFlags() *flagValues {
 	fv := &flagValues{}
 
 	flag.StringVar(&fv.address, "a", "localhost:8080", "address and port to run server")
@@ -105,6 +107,7 @@ func parseFlags(cfg *Config) *flagValues {
 	flag.StringVar(&fv.auditFile, "audit-file", "", "file for audit events")
 	flag.StringVar(&fv.auditURL, "audit-url", "", "address for audit events")
 	flag.StringVar(&fv.configJSONPath, "c", "", "config file path")
+	flag.StringVar(&fv.trustedSubnet, "t", "", "trusted subnet")
 	flag.BoolVar(&fv.enableHTTPS, "s", false, "enable HTTPS")
 
 	flag.Parse()
@@ -131,6 +134,8 @@ func applyFlags(cfg *Config, fv *flagValues) {
 			cfg.AuditFile = fv.auditFile
 		case "audit-url":
 			cfg.AuditURL = fv.auditURL
+		case "t":
+			cfg.TrustedSubnet = fv.trustedSubnet
 		case "s":
 			cfg.EnableHTTPS = fv.enableHTTPS
 		}

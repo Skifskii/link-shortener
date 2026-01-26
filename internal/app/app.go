@@ -16,6 +16,7 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
+	"github.com/Skifskii/link-shortener/internal/service/stats"
 	"go.uber.org/zap"
 )
 
@@ -67,8 +68,11 @@ func Run() error {
 		auditService.Register(urlobs.New(cfg.AuditURL))
 	}
 
+	// Сервис статистики
+	statsService := stats.New(cfg.TrustedSubnet, repo)
+
 	// HTTP сервер
-	r := router.New(zl, s, dBPingService, authServiece, auditService)
+	r := router.New(zl, s, dBPingService, authServiece, auditService, statsService)
 	return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
 }
 
@@ -81,6 +85,8 @@ type URLSaveGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	CreateUser(username string) (userID int, err error)
 	DeleteBatchOfLinks(userID int, shortURL []string) error
+	GetUsersCount() (int, error)
+	GetURLsCount() (int, error)
 }
 
 // chooseFallbackRepo выбирает запасное хранилище (файл или память) и возвращает его.
