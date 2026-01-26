@@ -33,3 +33,8 @@ type ResponsePairElement struct {
 type Response struct {
 	Result string `json:"result"`
 }
+
+type StatsResponse struct {
+	URLs  int `json:"urls"`  // количество сокращённых URL в сервисе
+	Users int `json:"users"` // количество пользователей в сервисе
+}

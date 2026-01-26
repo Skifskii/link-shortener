@@ -308,3 +308,19 @@ func (pr *PostgresqlRepo) GetUserPairs(userID int) ([]model.ResponsePairElement,
 
 	return pairs, nil
 }
+
+func (pr *PostgresqlRepo) GetUsersCount() (count int, err error) {
+	row := pr.db.QueryRow(
+		"SELECT COUNT(*) FROM users",
+	)
+	err = row.Scan(&count)
+	return count, err
+}
+
+func (pr *PostgresqlRepo) GetURLsCount() (count int, err error) {
+	row := pr.db.QueryRow(
+		"SELECT COUNT(*) FROM links",
+	)
+	err = row.Scan(&count)
+	return count, err
+}
