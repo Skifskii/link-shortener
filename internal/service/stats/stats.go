@@ -2,6 +2,7 @@ package stats
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/Skifskii/link-shortener/internal/model"
@@ -11,7 +12,7 @@ var ErrIPNotAllowed = errors.New("IP not allowed to access stats")
 
 type StatsService struct {
 	repo          Repo
-	trustedSubnet string
+	trustedSubnet *net.IPNet
 }
 
 type Repo interface {
@@ -20,7 +21,12 @@ type Repo interface {
 }
 
 func New(trustedSubnet string, repo Repo) *StatsService {
-	return &StatsService{trustedSubnet: trustedSubnet, repo: repo}
+	_, ipNet, err := net.ParseCIDR(trustedSubnet)
+	if err != nil {
+		fmt.Println("Invalid trusted subnet, defaulting to allow all")
+	}
+
+	return &StatsService{trustedSubnet: ipNet, repo: repo}
 }
 
 func (s *StatsService) GetIfAllowed(ip net.IP) (model.StatsResponse, error) {
@@ -45,6 +51,9 @@ func (s *StatsService) GetIfAllowed(ip net.IP) (model.StatsResponse, error) {
 	}, nil
 }
 
-func (_ *StatsService) isIPAllowed(_ net.IP) bool {
-	return true // TODO: описать логику проверки
+func (s *StatsService) isIPAllowed(ip net.IP) bool {
+	if s.trustedSubnet == nil {
+		return false
+	}
+	return s.trustedSubnet.Contains(ip)
 }

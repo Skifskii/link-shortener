@@ -145,7 +145,7 @@ func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error 
 }
 
 // RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
-func (_ *Router) RunTLS(server *http.Server, certPath, keyPath string) error {
+func (*Router) RunTLS(server *http.Server, certPath, keyPath string) error {
 	if certPath == "" || keyPath == "" {
 		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
 	}
