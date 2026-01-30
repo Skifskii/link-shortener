@@ -80,7 +80,7 @@ func Run() error {
 		return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
 	})
 	// - gRPC сервер
-	grpcServer := grpcserver.New(s, authServiece)
+	grpcServer := grpcserver.New(s, authServiece, s)
 	g.Go(func() error {
 		return grpcServer.Run(cfg.GRPCPort)
 	})

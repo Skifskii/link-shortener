@@ -19,6 +19,7 @@ type GRPCServer struct {
 	proto.UnimplementedShortenerServiceServer
 	shortener Shortener
 	auth      Auther
+	sr        ShortRedirecter
 }
 
 // Shortener интерфейс для сервиса сокращения ссылок.
@@ -34,10 +35,17 @@ type Auther interface {
 	GetUserID(tokenString string) (int, error)
 }
 
-func New(shortener Shortener, auth Auther) *GRPCServer {
+// ShortRedirecter интерфейс предоставляет метод для получения оригинального URL
+// по короткой части ссылки (без baseURL).
+type ShortRedirecter interface {
+	Redirect(shortURL string) (longURL string, err error)
+}
+
+func New(shortener Shortener, auth Auther, sr ShortRedirecter) *GRPCServer {
 	return &GRPCServer{
 		shortener: shortener,
 		auth:      auth,
+		sr:        sr,
 	}
 }
 
@@ -76,6 +84,23 @@ func (g *GRPCServer) ShortenURL(ctx context.Context, in *proto.URLShortenRequest
 	}
 
 	resp.SetResult(shortURL)
+
+	return &resp, nil
+}
+
+func (g *GRPCServer) ExpandURL(ctx context.Context, in *proto.URLExpandRequest) (*proto.URLExpandResponse, error) {
+	var resp proto.URLExpandResponse
+
+	shortURL := in.GetId()
+	if shortURL == "" {
+		return nil, status.Error(codes.Internal, "id не указан")
+	}
+
+	longURL, err := g.sr.Redirect(shortURL)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	resp.SetResult(longURL)
 
 	return &resp, nil
 }
