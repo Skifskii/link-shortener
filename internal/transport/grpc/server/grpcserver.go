@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Skifskii/link-shortener/internal/middleware/authmw"
 	"github.com/Skifskii/link-shortener/internal/repository"
+	"github.com/Skifskii/link-shortener/internal/transport/grpc/interceptors"
 	"github.com/Skifskii/link-shortener/pkg/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -16,6 +18,7 @@ import (
 type GRPCServer struct {
 	proto.UnimplementedShortenerServiceServer
 	shortener Shortener
+	auth      Auther
 }
 
 // Shortener интерфейс для сервиса сокращения ссылок.
@@ -23,9 +26,18 @@ type Shortener interface {
 	Shorten(userID int, longURL string) (shortURL string, err error)
 }
 
-func New(shortener Shortener) *GRPCServer {
+// Auther - интерфейс для работы с пользователями и JWT-токенами.
+type Auther interface {
+	// CreateUser создает нового пользователя и возвращает его JWT-токен.
+	CreateUser(username string) (jwt string, err error)
+	// GetUserID извлекает идентификатор пользователя из JWT-токена.
+	GetUserID(tokenString string) (int, error)
+}
+
+func New(shortener Shortener, auth Auther) *GRPCServer {
 	return &GRPCServer{
 		shortener: shortener,
+		auth:      auth,
 	}
 }
 
@@ -38,7 +50,8 @@ func (g *GRPCServer) Run(port int) error {
 	// Запускаем сервер
 	fmt.Printf("Starting gRPC server at %s\n", listen.Addr().String())
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(interceptors.NewAuthUnaryInterceptor(g.auth)))
+
 	proto.RegisterShortenerServiceServer(s, g)
 
 	return s.Serve(listen)
@@ -47,7 +60,10 @@ func (g *GRPCServer) Run(port int) error {
 func (g *GRPCServer) ShortenURL(ctx context.Context, in *proto.URLShortenRequest) (*proto.URLShortenResponse, error) {
 	var resp proto.URLShortenResponse
 
-	userID := 0 // TODO: научиться получать userID
+	userID, ok := ctx.Value(authmw.UserIDKey).(int)
+	if !ok {
+		return nil, status.Error(codes.Internal, "ошибка при определении user_id")
+	}
 
 	// Сокращаем ссылку
 	shortURL, err := g.shortener.Shorten(userID, in.GetUrl())
