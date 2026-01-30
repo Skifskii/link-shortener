@@ -3,6 +3,8 @@
 package app
 
 import (
+	"context"
+
 	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/model"
@@ -17,6 +19,9 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
 	"github.com/Skifskii/link-shortener/internal/service/stats"
+	grpcserver "github.com/Skifskii/link-shortener/internal/transport/grpc/server"
+	"golang.org/x/sync/errgroup"
+
 	"go.uber.org/zap"
 )
 
@@ -33,7 +38,6 @@ func Run() error {
 
 	// Репозиторий
 	var repo URLSaveGetter
-
 	pgrepo, err := postgresql.NewPostgresqlRepo(cfg.DatabaseDSN, zl)
 	if err == nil {
 		// Пробуем использовать Postgres
@@ -50,16 +54,14 @@ func Run() error {
 		}
 	}
 
-	// Сервис сокращения ссылок
+	// ===== Сервисы =====
+	// - сервис сокращения ссылок
 	s := shortener.New(cfg.BaseURL, 6, repo)
-
-	// Сервис проверки подключения к БД
+	// - сервис проверки подключения к БД
 	dBPingService := dbping.New(pgrepo)
-
-	// Сервис аутентификации
+	// - сервис аутентификации
 	authServiece := auth.New(repo, cfg.SecretKey)
-
-	// Сервис аудита запросов
+	// - сервис аудита запросов
 	auditService := audit.New()
 	if cfg.AuditFile != "" {
 		auditService.Register(fileobs.New(cfg.AuditFile))
@@ -67,13 +69,23 @@ func Run() error {
 	if cfg.AuditURL != "" {
 		auditService.Register(urlobs.New(cfg.AuditURL))
 	}
-
-	// Сервис статистики
+	// - сервис статистики
 	statsService := stats.New(cfg.TrustedSubnet, repo)
 
-	// HTTP сервер
+	// ===== Транспортный слой =====
+	g, _ := errgroup.WithContext(context.Background())
+	// - HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece, auditService, statsService)
-	return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
+	g.Go(func() error {
+		return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
+	})
+	// - gRPC сервер
+	grpcServer := grpcserver.New(s)
+	g.Go(func() error {
+		return grpcServer.Run(cfg.GRPCPort)
+	})
+
+	return g.Wait()
 }
 
 // URLSaveGetter определяет набор методов, которые приложение ожидает от

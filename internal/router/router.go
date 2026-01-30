@@ -126,7 +126,7 @@ func (r *Router) Run(address, certPath, keyPath string, enableHTTPS bool) error 
 	}()
 
 	// Запускаем сервер
-	fmt.Printf("Starting server at %s\n", address)
+	fmt.Printf("Starting HTTP server at %s\n", address)
 	var err error
 	if enableHTTPS {
 		err = r.RunTLS(server, certPath, keyPath)

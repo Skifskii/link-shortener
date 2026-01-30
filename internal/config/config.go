@@ -24,6 +24,7 @@ type Config struct {
 	AuditFile       string `json:"audit_file" env:"AUDIT_FILE"`
 	AuditURL        string `json:"audit_url" env:"AUDIT_URL"`
 	TrustedSubnet   string `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
+	GRPCPort        int    `json:"grpc_port" env:"GRPC_PORT"`
 	EnableHTTPS     bool   `json:"enable_https" env:"ENABLE_HTTPS"`
 	TLSCertPath     string
 	TLSKeyPath      string
@@ -92,6 +93,7 @@ type flagValues struct {
 	auditURL        string
 	configJSONPath  string
 	trustedSubnet   string
+	gRPCPort        int
 	enableHTTPS     bool
 }
 
@@ -108,6 +110,7 @@ func parseFlags() *flagValues {
 	flag.StringVar(&fv.auditURL, "audit-url", "", "address for audit events")
 	flag.StringVar(&fv.configJSONPath, "c", "", "config file path")
 	flag.StringVar(&fv.trustedSubnet, "t", "", "trusted subnet")
+	flag.IntVar(&fv.gRPCPort, "g", 0, "gRPC port")
 	flag.BoolVar(&fv.enableHTTPS, "s", false, "enable HTTPS")
 
 	flag.Parse()
@@ -136,6 +139,8 @@ func applyFlags(cfg *Config, fv *flagValues) {
 			cfg.AuditURL = fv.auditURL
 		case "t":
 			cfg.TrustedSubnet = fv.trustedSubnet
+		case "g":
+			cfg.GRPCPort = fv.gRPCPort
 		case "s":
 			cfg.EnableHTTPS = fv.enableHTTPS
 		}
