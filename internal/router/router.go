@@ -97,7 +97,7 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 }
 
 // Run запускает HTTP сервер на указанном адресе.
-func (r *Router) Run(ctx context.Context, address, certPath, keyPath string, enableHTTPS bool) error {
+func (r *Router) Run(zl *zap.Logger, ctx context.Context, address, certPath, keyPath string, enableHTTPS bool) error {
 	server := &http.Server{
 		Addr:    address,
 		Handler: r.chiRouter,
@@ -113,13 +113,13 @@ func (r *Router) Run(ctx context.Context, address, certPath, keyPath string, ena
 	// запускаем горутину обработки пойманных прерываний
 	go func() {
 		<-sigint
-		fmt.Println("Shutting down server...")
+		zl.Info("Shutting down server...")
 
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			fmt.Printf("HTTP server Shutdown: %v\n", err)
+			zl.Error("HTTP server Shutdown: %v", zap.Error(err))
 		}
 
 		close(connsClosed)
