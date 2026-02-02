@@ -58,7 +58,7 @@ func New(shortener Shortener, auth Auther, sr ShortRedirecter, u UserPairsGetter
 	}
 }
 
-func (g *GRPCServer) Run(port int) error {
+func (g *GRPCServer) Run(_ context.Context, port int) error {
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return fmt.Errorf("gRPC server error: %w", err)

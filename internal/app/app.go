@@ -73,16 +73,16 @@ func Run() error {
 	statsService := stats.New(cfg.TrustedSubnet, repo)
 
 	// ===== Транспортный слой =====
-	g, _ := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(context.Background())
 	// - HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece, auditService, statsService)
 	g.Go(func() error {
-		return r.Run(cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
+		return r.Run(ctx, cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
 	})
 	// - gRPC сервер
 	grpcServer := grpcserver.New(s, authServiece, s, s)
 	g.Go(func() error {
-		return grpcServer.Run(cfg.GRPCPort)
+		return grpcServer.Run(ctx, cfg.GRPCPort)
 	})
 
 	return g.Wait()
