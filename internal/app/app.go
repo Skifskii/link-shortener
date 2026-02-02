@@ -4,6 +4,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/logger"
@@ -70,14 +71,17 @@ func Run() error {
 		auditService.Register(urlobs.New(cfg.AuditURL))
 	}
 	// - сервис статистики
-	statsService := stats.New(cfg.TrustedSubnet, repo)
+	statsService, err := stats.New(cfg.TrustedSubnet, repo)
+	if err != nil {
+		return fmt.Errorf("failed to initialize stats service: %w", err)
+	}
 
 	// ===== Транспортный слой =====
 	g, ctx := errgroup.WithContext(context.Background())
 	// - HTTP сервер
 	r := router.New(zl, s, dBPingService, authServiece, auditService, statsService)
 	g.Go(func() error {
-		return r.Run(ctx, cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
+		return r.Run(zl, ctx, cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
 	})
 	// - gRPC сервер
 	grpcServer := grpcserver.New(s, authServiece, s, s)

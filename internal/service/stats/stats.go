@@ -20,13 +20,13 @@ type Repo interface {
 	GetURLsCount() (int, error)
 }
 
-func New(trustedSubnet string, repo Repo) *StatsService {
+func New(trustedSubnet string, repo Repo) (*StatsService, error) {
 	_, ipNet, err := net.ParseCIDR(trustedSubnet)
 	if err != nil {
-		fmt.Println("Invalid trusted subnet, defaulting to allow all")
+		return nil, fmt.Errorf("failed to parse CIDR: %w", err)
 	}
 
-	return &StatsService{trustedSubnet: ipNet, repo: repo}
+	return &StatsService{trustedSubnet: ipNet, repo: repo}, nil
 }
 
 func (s *StatsService) GetIfAllowed(ip net.IP) (model.StatsResponse, error) {
