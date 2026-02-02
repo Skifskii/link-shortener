@@ -2,9 +2,16 @@
 package router
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/Skifskii/link-shortener/internal/handler/api/inter/stats"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten"
 	"github.com/Skifskii/link-shortener/internal/handler/api/shorten/batch"
 	"github.com/Skifskii/link-shortener/internal/handler/api/user/urls"
@@ -52,8 +59,13 @@ type auditEventNotifier interface {
 	NotifyAll(*audit.Event)
 }
 
+// statsGetter - интерфейс для получения статистики.
+type statsGetter interface {
+	GetIfAllowed(ip net.IP) (model.StatsResponse, error)
+}
+
 // New создаёт новый Router, регистрирует middleware и обработчики.
-func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier) *Router {
+func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventNotifier, stat statsGetter) *Router {
 	r := chi.NewRouter()
 
 	// middlewares
@@ -75,6 +87,9 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 			r.Get("/urls", urls.New(shorter))
 			r.Delete("/urls", urls.NewDelete(shorter))
 		})
+		r.Route("/internal", func(r chi.Router) {
+			r.Get("/stats", stats.New(stat))
+		})
 	})
 	r.Get("/ping", ping.New(p))
 
@@ -82,7 +97,58 @@ func New(zl *zap.Logger, shorter Shorter, p pinger, auth Auther, aud auditEventN
 }
 
 // Run запускает HTTP сервер на указанном адресе.
-func (r *Router) Run(address string) error {
-	fmt.Printf("Starting server at %s\n", address)
-	return http.ListenAndServe(address, r.chiRouter)
+func (r *Router) Run(zl *zap.Logger, ctx context.Context, address, certPath, keyPath string, enableHTTPS bool) error {
+	server := &http.Server{
+		Addr:    address,
+		Handler: r.chiRouter,
+	}
+
+	// через этот канал сообщим основному потоку, что соединения закрыты
+	connsClosed := make(chan struct{})
+
+	// канал для перенаправления прерываний
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	// запускаем горутину обработки пойманных прерываний
+	go func() {
+		<-sigint
+		zl.Info("Shutting down server...")
+
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			zl.Error("HTTP server Shutdown: %v", zap.Error(err))
+		}
+
+		close(connsClosed)
+	}()
+
+	// Запускаем сервер
+	fmt.Printf("Starting HTTP server at %s\n", address)
+	var err error
+	if enableHTTPS {
+		err = r.RunTLS(server, certPath, keyPath)
+	} else {
+		err = server.ListenAndServe()
+	}
+	if err != http.ErrServerClosed {
+		return fmt.Errorf("HTTP server ListenAndServe: %w", err)
+	}
+
+	// Ждём закрытия всех соединений
+	<-connsClosed
+	fmt.Println("Server Shutdown gracefully")
+
+	return nil
+}
+
+// RunTLS - запускает HTTPS сервер на указанном адресе с заданными сертификатом и ключом.
+func (*Router) RunTLS(server *http.Server, certPath, keyPath string) error {
+	if certPath == "" || keyPath == "" {
+		return fmt.Errorf("TLS certificate path and key path must be provided for HTTPS")
+	}
+
+	return server.ListenAndServeTLS(certPath, keyPath)
 }

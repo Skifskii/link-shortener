@@ -3,6 +3,9 @@
 package app
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/Skifskii/link-shortener/internal/config"
 	"github.com/Skifskii/link-shortener/internal/logger"
 	"github.com/Skifskii/link-shortener/internal/model"
@@ -16,6 +19,10 @@ import (
 	"github.com/Skifskii/link-shortener/internal/service/auth"
 	"github.com/Skifskii/link-shortener/internal/service/dbping"
 	"github.com/Skifskii/link-shortener/internal/service/shortener"
+	"github.com/Skifskii/link-shortener/internal/service/stats"
+	grpcserver "github.com/Skifskii/link-shortener/internal/transport/grpc/server"
+	"golang.org/x/sync/errgroup"
+
 	"go.uber.org/zap"
 )
 
@@ -32,7 +39,6 @@ func Run() error {
 
 	// Репозиторий
 	var repo URLSaveGetter
-
 	pgrepo, err := postgresql.NewPostgresqlRepo(cfg.DatabaseDSN, zl)
 	if err == nil {
 		// Пробуем использовать Postgres
@@ -49,16 +55,14 @@ func Run() error {
 		}
 	}
 
-	// Сервис сокращения ссылок
+	// ===== Сервисы =====
+	// - сервис сокращения ссылок
 	s := shortener.New(cfg.BaseURL, 6, repo)
-
-	// Сервис проверки подключения к БД
+	// - сервис проверки подключения к БД
 	dBPingService := dbping.New(pgrepo)
-
-	// Сервис аутентификации
+	// - сервис аутентификации
 	authServiece := auth.New(repo, cfg.SecretKey)
-
-	// Сервис аудита запросов
+	// - сервис аудита запросов
 	auditService := audit.New()
 	if cfg.AuditFile != "" {
 		auditService.Register(fileobs.New(cfg.AuditFile))
@@ -66,10 +70,26 @@ func Run() error {
 	if cfg.AuditURL != "" {
 		auditService.Register(urlobs.New(cfg.AuditURL))
 	}
+	// - сервис статистики
+	statsService, err := stats.New(cfg.TrustedSubnet, repo)
+	if err != nil {
+		return fmt.Errorf("failed to initialize stats service: %w", err)
+	}
 
-	// HTTP сервер
-	r := router.New(zl, s, dBPingService, authServiece, auditService)
-	return r.Run(cfg.Address)
+	// ===== Транспортный слой =====
+	g, ctx := errgroup.WithContext(context.Background())
+	// - HTTP сервер
+	r := router.New(zl, s, dBPingService, authServiece, auditService, statsService)
+	g.Go(func() error {
+		return r.Run(zl, ctx, cfg.Address, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.EnableHTTPS)
+	})
+	// - gRPC сервер
+	grpcServer := grpcserver.New(s, authServiece, s, s)
+	g.Go(func() error {
+		return grpcServer.Run(ctx, cfg.GRPCPort)
+	})
+
+	return g.Wait()
 }
 
 // URLSaveGetter определяет набор методов, которые приложение ожидает от
@@ -81,6 +101,8 @@ type URLSaveGetter interface {
 	GetUserPairs(userID int) ([]model.ResponsePairElement, error)
 	CreateUser(username string) (userID int, err error)
 	DeleteBatchOfLinks(userID int, shortURL []string) error
+	GetUsersCount() (int, error)
+	GetURLsCount() (int, error)
 }
 
 // chooseFallbackRepo выбирает запасное хранилище (файл или память) и возвращает его.
