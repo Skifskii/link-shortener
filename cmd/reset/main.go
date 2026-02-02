@@ -11,6 +11,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,12 +20,12 @@ import (
 func main() {
 	root, err := findProjectRoot()
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to find project root: %v", err)
 	}
 
 	pkgs, err := scanPackages(root)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to scan packages: %v", err)
 	}
 
 	for _, pkg := range pkgs {
@@ -64,7 +65,7 @@ func main() {
 
 		err := writeResetFile(pkg, generated)
 		if err != nil {
-			panic(err)
+			log.Fatalf("failed to write reset file: %v", err)
 		}
 	}
 }
